@@ -5,8 +5,6 @@ date: 2022-09-16 16:59:46 -0300
 categories: modem callblocker
 ---
 
-# Making a call blocker
-
 So, my dad still have a landline, in 2022. And it's being spammed with robocalls. 
 
 It's so annoying that I decided to use a Raspberry Pi as a call blocker. For that, I need to play with an USB modem! 

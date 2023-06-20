@@ -5,8 +5,6 @@ date:   2022-09-09 19:21:00 -0300
 categories: kernel-dev
 ---
 
-# Wannabe Linux Kernel Developer Diary - Entry 1
-
 So, I want to become a Kernel Developer. Ambitious, right? Well, it is.
 
 FOSS (Free Open Source Software) development is usually hard enough. For me, finding something that I could work on was pretty difficult, but that didn't stop me. Sometimes you go after bugs, sometimes they come to you.

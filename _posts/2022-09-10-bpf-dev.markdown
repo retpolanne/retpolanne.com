@@ -5,8 +5,6 @@ date: 2022-09-10 15:03:22 -0300
 categories: kernel-dev bpf notes
 ---
 
-# note-taking post - bpf kernel dev - how to begin hacking it
-
 This is a very unstructured post, full of errors and stuff. Use it only for reference.
 
 After spending some time lurking on the bpf mailing lists, I figured out it might be a good idea to start checking some code as well.

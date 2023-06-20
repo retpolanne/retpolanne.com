@@ -5,8 +5,6 @@ date: 2022-09-21 20:01:10 -0300
 categories: kernel-dev
 ---
 
-# Wannabe Linux Kernel Developer Diary - Entry 2
-
 First of all, I would like to thank everybody who hyped my post: the ones who liked it on Linkedin, the folks from FLUSP and LKCAMP, everybody who reviewed the first entry, sent me feedbacks, etc. You folks are AMAZING, and it really motivated me into continuing this journey. I can't believe how much I've learned about the kernel throughout these weeks. You motivated me so much. Thank you so much! 
 
 And thanks to the Linux folks who work at my employer. I think I'm in the right path to become a full-time kernel developer at some point :)

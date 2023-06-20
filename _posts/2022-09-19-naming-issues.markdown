@@ -5,8 +5,6 @@ date: 2022-09-19 17:57:18 -0300
 categories: kernel-dev dco
 ---
 
-# The kernel has a naming issue...
-
 I'm trans. That means that my legal name is a dead name and doesn't match my identity. 
 However, I still haven't changed my legal documents to the new name, and my new name doesn't look very consistent. 
 

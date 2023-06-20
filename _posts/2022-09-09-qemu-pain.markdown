@@ -4,7 +4,6 @@ title: "Tips and tricks: setting up QEMU for kernel development"
 date: 2022-09-09 20:37:07 -0300
 categories: tips-n-tricks qemu
 ---
-# Tips and tricks: setting up QEMU for kernel development
 
 This is just a post documenting what I did to set up a QEMU VM for doing kernel development.
 It also highlights the pain points for people that want to do a headless installation (i.e. without having a GTK display available). 

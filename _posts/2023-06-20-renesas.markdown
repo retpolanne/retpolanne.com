@@ -6,8 +6,6 @@ categories: kernel-dev renesas
 tags: kernel-dev renesas
 ---
 
-# Kernel Dev - The Renesas Journey
-
 I'm back with my blog! And it's as shiny and brand new as possible. 
 
 This is the story of my journey with a Renesas XHCI host controller from a very weird PCI-e USB-C card. 

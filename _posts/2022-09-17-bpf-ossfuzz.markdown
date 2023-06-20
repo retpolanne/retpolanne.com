@@ -5,8 +5,6 @@ date: 2022-09-17 12:20:14 -0300
 categories: bpf kernel oss-fuzz
 ---
 
-# WIP - BPF and OSS-Fuzz - Understanding a bug
-
 I came across this bug [1] on libbpf and I decided to tackle this. It's a bug that was reported by OSS-Fuzz, a project created by Google to lend their computing power to do Fuzzing on open source software. 
 
 Reproducing the bug is straightforward, but I have to break it up to understand it better. 
