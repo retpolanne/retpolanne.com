@@ -18,6 +18,7 @@ It comes with a USB-C on the front panel, which is handy for using my Yubikey.
 ![My shiny case with Lain dancing in it](/assets/img/case.jpg){:width="50%"}
 
 > **_NOTE:_** Never, ever, remove the panel of your case with it in the vertical. I did it and that's what happened:
+
 > ![Oops!](/assets/img/broken-case.jpg){:width="50%"}
 
 So, I use my Yubikey to decrypt LUKS, so instead of asking for a password it asks for the Yubikey and user presence 
@@ -47,7 +48,13 @@ fix software issues!
 
 So the first thing I did was a `dmesg` and voilá, I found the error. 
 
-*TODO* add the error here from dmesg.
+```
+[   30.612844] xhci_hcd 0000:06:00.0: Download to external ROM TO: 0
+[   30.734390] xhci_hcd 0000:06:00.0: Timeout for Set DATAX step: 2
+[   30.734444] xhci_hcd 0000:06:00.0: Firmware Download Step 2 failed at position 8 bytes with (-110).
+[   30.734523] xhci_hcd 0000:06:00.0: firmware failed to download (-110).
+[   30.734583] xhci_hcd: probe of 0000:06:00.0 failed with error -110
+```
 
 I googled the error, just like everyone does, and I found an email from the person who coded the driver stating the same error [1]. 
 
@@ -62,14 +69,254 @@ I decided to follow this guide [2] to clone the kernel, did a quick and dirty pa
 I changed the XHCI configs to make it loadable instead of built in. Compiled the kernel, installed it, booted it, the card was still failing to load. 
 Then I changed these macros for delay and retry and recompiled just the module. I did recompile the whole kernel before doing it I believe.
 
-*TODO* add zstd commands
 ```sh
 make M=drivers/usb/host/xhci-pci-renesas.c
+zstd drivers/usb/host/xhci-pci-renesas.ko
+sudo cp -f drivers/usb/host/xhci-pci-renesas.ko.zst /lib/modules/6.3.8-arch1-1-renesas-patch/kernel/drivers/usb/host/
+```
+
+This is how I load the module after I compile it. 
+
+Anyways, after doing a quick and dirty hack of these parameters, I decided to do something that sounded correct in my mind: I've added these delay and retry parameters to Kconfig. This way, I could tweak them and there would be no need to change the values hardcoded afterwards. 
+
+I submitted the patch [3] and it wasn't a good patch. 
+
+Greg K. H. responded saying that this could affect environments where multiple Renesas cards are used, and indeed I forgot about this scenario. What he recommended was to find a way to determine this dynamically. Christian Lamparter also reviewed and suggested that I looked at the "uPD720201/uPD720202 User's Manual" [4]. It's a great read and it helped me a lot to understand what this driver actually does. 
+
+Okay, now that I need to go back to the drawing board, I need to find ways to debug the module.
+
+## Debugging
+
+I was using a custom kernel on my physical machine with `xhci_pci` loading as a systemd-boot module and with different configs for the delay and retry values. However, troubleshooting this driver is a little painful: since it is able to download the firmware to the ROM with the delay+retry values I provided on the config, it is so hard to erase the ROM and make it redownload the firmware. 
+
+I got inspired by this patch [5] and wrote mine [6]. When I do this:
+
+```sh
+echo 1 > /sys/kernel/debug/renesas_usb/rom_erase
+```
+
+The ROM should be erased. However, when I `rmmod` it and try to add it again, I see logs saying that the external ROM already exists. Why??
+
+Action plan: 
+
+- Boot with my default kernel: this way, the driver will timeout and the firmware won't be downloaded completely
+- Setup some PCI passthrough with KVM
+- Connect it to qemu
+
+### Preparing QEMU
+
+I followed these guides \[7] \[8] to setup my kernel environment for QEMU. 
+
+This is my quick and dirty script for generating a debootstrap image: 
+
+```sh
+#!/bin/bash
+
+qemu-img create debootstrap.img 1g
+mkfs.ext2 debootstrap.img
+mkdir tmp-mount
+sudo mount -o loop debootstrap.img tmp-mount
+sudo debootstrap --arch amd64 buster tmp-mount
+sudo umount tmp-mount
+rmdir tmp-mount
+```
+
+This will create a quite small, all-you-need, image that you can use with QEMU. There are ways to make even smaller rootfs, but I just wanted something quick and easy. 
+
+Then, I had to recompile the kernel with kvm configs. I also wanted to add the XHCI modules as builtins (they don't show up on lsmod, but they show up in `/sys/module`), so I don't really have to bother with where I'm sending these modules. Recompiling the kernel for KVM is quite fast and I might need to reboot the VM a few times anyways. 
+
+```sh
+make defconfig
+make kvm_guest.config
+# Edit the .config file to add these as builtins
+cat .config | grep XHCI
+CONFIG_USB_XHCI_HCD=y
+CONFIG_USB_XHCI_DBGCAP=y
+CONFIG_USB_XHCI_PCI=y
+CONFIG_USB_XHCI_PCI_RENESAS=y
+CONFIG_USB_XHCI_PLATFORM=y
+```
+
+Booting the kernel (without PCI passthrough): 
+
+```sh
+qemu-system-x86_64 \
+    -kernel src/archlinux-linux/arch/x86/boot/bzImage \
+    -hda debootstrap.img \
+    -append "root=/dev/sda console=ttyS0" \
+    -serial stdio
+```
+
+I had to mount the debootstrap.img and chroot to it in order to change the root password btw.
+
+### Preparing the PCI passthrough
+
+This StackOverflow question helped [9]. 
+
+This is what I need to do: 
+
+```sh
+# Check if IOMMU is enabled
+dmesg | grep AMD-Vi
+[    0.168009] AMD-Vi: Using global IVHD EFR:0xf77ef22294ada, EFR2:0x0
+[    0.419669] pci 0000:00:00.2: AMD-Vi: IOMMU performance counters supported
+[    0.420572] pci 0000:00:00.2: AMD-Vi: Found IOMMU cap 0x40
+[    0.420573] AMD-Vi: Extended features (0xf77ef22294ada, 0x0): PPR NX GT IA GA PC GA_vAPIC
+[    0.420579] AMD-Vi: Interrupt remapping enabled
+[    0.420586] AMD-Vi: Virtual APIC enabled
+[    0.510531] AMD-Vi: AMD IOMMUv2 loaded and initialized
+
+# Get information from the card
+lspci -v -nn -s 06:00.0
+06:00.0 USB controller [0c03]: Renesas Technology Corp. uPD720201 USB 3.0 Host Controller [1912:0014] (rev 03) (prog-if 30 [XHCI])
+	Flags: fast devsel, IRQ 25, IOMMU group 14
+	Memory at fc300000 (64-bit, non-prefetchable) [size=8K]
+	Capabilities: [50] Power Management version 3
+	Capabilities: [70] MSI: Enable- Count=1/8 Maskable- 64bit+
+	Capabilities: [90] MSI-X: Enable- Count=8 Masked-
+	Capabilities: [a0] Express Endpoint, MSI 00
+	Capabilities: [100] Advanced Error Reporting
+	Capabilities: [150] Latency Tolerance Reporting
+	Kernel modules: xhci_pci
+
+modprobe pci_stub
+echo "1912 0014" > /sys/bus/pci/drivers/pci-stub/new_id
+# Unbind the PCI from the actual driver
+echo "0000:06:00.0" > /sys/bus/pci/devices/0000\:06\:00.0/driver/unbind
+# Bind to pci-stub
+echo "0000:06:00.0" > /sys/bus/pci/drivers/pci-stub/bind
+
+# Start QEMU
+qemu-system-x86_64 \
+    -kernel src/archlinux-linux/arch/x86/boot/bzImage \
+    -hda debootstrap.img \
+    -append "root=/dev/sda console=ttyS0" \
+    -serial stdio \
+    -device pci-assign,host=06:00.0
+
+qemu-system-x86_64: -device pci-assign,host=06:00.0: 'pci-assign' is not a valid device model name
+```
+
+🤡
+
+Let's try to check which devices we can use with QEMU's `-monitor` option:
+
+```sh
+qemu-system-x86_64 \
+    -kernel src/archlinux-linux/arch/x86/boot/bzImage \
+    -hda debootstrap.img \
+    -append "root=/dev/sda console=ttyS0" \
+    -monitor stdio
+
+QEMU 8.0.2 monitor - type 'help' for more information
+(qemu) VNC server running on ::1:5900
+
+(qemu) device_add pci-assign,host=06:00.0
+Error: 'pci-assign' is not a valid device model name
+(qemu) device_add vfio-pci,host=06:00.0
+Error: vfio 0000:06:00.0: failed to open /dev/vfio/14: No such file or directory
+```
+
+So maybe we need to use another driver, `vfio_pci`.
+
+```sh
+modprobe vfio_pci
+echo "1912 0014" > /sys/bus/pci/drivers/vfio-pci/new_id
+echo "0000:06:00.0" > /sys/bus/pci/devices/0000\:06\:00.0/driver/unbind
+echo "0000:06:00.0" > /sys/bus/pci/drivers/vfio-pci/bind 
+
+# Had to run as sudo! All of the commands above are ran as root
+sudo qemu-system-x86_64 \
+    -kernel src/archlinux-linux/arch/x86/boot/bzImage \
+    -hda debootstrap.img \
+    -append "root=/dev/sda console=ttyS0" \
+    -monitor stdio
+
+QEMU 8.0.2 monitor - type 'help' for more information
+(qemu) VNC server running on ::1:5900
+
+(qemu) device_add vfio-pci,host=06:00.0
+Error: vfio 0000:06:00.0: group 14 is not viable
+Please ensure all devices within the iommu_group are bound to their vfio bus driver.
+(qemu) qemu-system-x86_64: terminating on signal 2
+
+# It seems the device is bound to vfio-pci already
+lspci -v -nn -s 06:00.0 | grep vfio
+	Kernel driver in use: vfio-pci
+```
+
+I used this script from Arch Wiki (thanks for the tip, redditor r/calebbill) [10]:
+
+```sh
+#!/bin/bash
+shopt -s nullglob
+for g in $(find /sys/kernel/iommu_groups/* -maxdepth 0 -type d | sort -V); do
+    echo "IOMMU Group ${g##*/}:"
+    for d in $g/devices/*; do
+        echo -e "\t$(lspci -nns ${d##*/})"
+    done;
+done;
+```
+
+All of these devices are in the same IOMMU group!
 
 ```
+IOMMU Group 14:
+	02:00.0 USB controller [0c03]: Advanced Micro Devices, Inc. [AMD] 500 Series Chipset USB 3.1 XHCI Controller [1022:43ee]
+	02:00.1 SATA controller [0106]: Advanced Micro Devices, Inc. [AMD] 500 Series Chipset SATA Controller [1022:43eb]
+	02:00.2 PCI bridge [0604]: Advanced Micro Devices, Inc. [AMD] 500 Series Chipset Switch Upstream Port [1022:43e9]
+	03:00.0 PCI bridge [0604]: Advanced Micro Devices, Inc. [AMD] Device [1022:43ea]
+	03:04.0 PCI bridge [0604]: Advanced Micro Devices, Inc. [AMD] Device [1022:43ea]
+	03:08.0 PCI bridge [0604]: Advanced Micro Devices, Inc. [AMD] Device [1022:43ea]
+	03:09.0 PCI bridge [0604]: Advanced Micro Devices, Inc. [AMD] Device [1022:43ea]
+	05:00.0 Non-Volatile memory controller [0108]: Kingston Technology Company, Inc. SNVS2000G [NV1 NVMe PCIe SSD 2TB] [2646:500e] (rev 01)
+	06:00.0 USB controller [0c03]: Renesas Technology Corp. uPD720201 USB 3.0 Host Controller [1912:0014] (rev 03)
+	07:00.0 Ethernet controller [0200]: Realtek Semiconductor Co., Ltd. RTL8125 2.5GbE Controller [10ec:8125] (rev 04)
+```
+
+I don't really want to be messing up with this whole group! Is it safe to unbind them? This doc [11] says it's sufficient to just unbind.
+
+```
+If the IOMMU group contains multiple devices, each will need to
+be bound to a VFIO driver before operations on the VFIO group
+are allowed (it's also sufficient to only unbind the device from
+host drivers if a VFIO driver is unavailable; this will make the
+group available, but not that particular device)
+```
+
+If my ssh connection dies, it was because of this: 
+
+```sh
+echo "0000:07:00.0" > /sys/bus/pci/devices/0000\:07\:00.0/driver/unbind
+client_loop: send disconnect: Broken pipe
+```
+
+LOL it did die. The NVMe controller is in the same group, I wonder how much harm I could've done if I blindly followed this documentation.
+
+Forget about PCI passthrough :(. Need to deal with real HW.
+
+> *_NOTE_* this is a live post that I'm writing as I figure stuff out. 
 
 # References 
 
 \[1] [Re: [PATCH v3 1/4] usb: xhci: add firmware loader for uPD720201 and uPD720202 w/o ROM](https://lore.kernel.org/lkml/20190626070658.GP2962@vkoul-mobl/)
 
 \[2] [Kernel/Arch build system](https://wiki.archlinux.org/title/Kernel/Arch_build_system)
+
+\[3] [[PATCH] usb: host: xhci: parameterize Renesas delay/retry](https://lore.kernel.org/linux-usb/20230618224656.2476-2-retpolanne@posteo.net/T/#m5dc2580dbf90a835eb98f125e3a99872b961f7ed)
+
+\[4] [uPD720201/uPD720202 User's Manual: Hardware](http://www.phasure.com/index.php?action=dlattach;topic=2784.0;attach=3281)
+
+\[5] [[PATCH v8 5/5] usb: xhci: provide a debugfs hook for erasing rom](https://yhbt.net/lore/all/20200323170601.419809-6-vkoul@kernel.org/) 
+
+\[6] [erase-rom.patch](https://github.com/retpolanne/kernel-workspace/blob/main/patches/erase-rom.patch)
+
+\[7] [Linux kernel QEMU setup](https://vccolombo.github.io/cybersecurity/linux-kernel-qemu-setup/)
+
+\[8] [Setting up QEMU-KVM for kernel development](https://www.collabora.com/news-and-blog/blog/2017/01/16/setting-up-qemu-kvm-for-kernel-development/)
+
+\[9] [QEMU Arm how to passthrough a PCI Card?](https://unix.stackexchange.com/questions/96606/qemu-arm-how-to-passthrough-a-pci-card)
+
+\[10] [Ensuring that the groups are valid](https://wiki.archlinux.org/title/PCI_passthrough_via_OVMF#Ensuring_that_the_groups_are_valid)
+
+\[11] [VFIO - "Virtual Function I/O" [1]](https://www.kernel.org/doc/Documentation/driver-api/vfio.rst)
