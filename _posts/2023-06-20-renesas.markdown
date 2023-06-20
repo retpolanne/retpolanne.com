@@ -3,6 +3,7 @@ layout: post
 title:  "Kernel Dev - The Renesas Journey"
 date:   2023-06-20 11:17:21 -0300
 categories: kernel-dev renesas
+tags: kernel-dev renesas
 ---
 
 # Kernel Dev - The Renesas Journey
@@ -16,10 +17,10 @@ This is the story of my journey with a Renesas XHCI host controller from a very 
 So, I've recently bought a Corsair 5000x case for my computer. It's a nice and shiny case and I couldn't stop staring at it. 
 It comes with a USB-C on the front panel, which is handy for using my Yubikey. 
 
-![My shiny case with Lain dancing in it](/assets/img/case.jpg)
+![My shiny case with Lain dancing in it](/assets/img/case.jpg){:width="50%"}
 
 > **_NOTE:_** Never, ever, remove the panel of your case with it in the vertical. I did it and that's what happened:
-> ![Oops!](/assets/img/broken-case.jpg)
+> ![Oops!](/assets/img/broken-case.jpg){:width="50%"}
 
 So, I use my Yubikey to decrypt LUKS, so instead of asking for a password it asks for the Yubikey and user presence 
 (I know, this isn't as safe, so I'm going to also somehow add the TPM pin to it). 
@@ -29,7 +30,7 @@ I tried also adding a Divoom speaker I have and I saw that it was charging so it
 
 I realized that there was a cable from my front panel that I didn't know where it fit. Guess what: this is the USB-C cable! 
 
-![USB-C connector](/assets/img/usbc.jpg)
+![USB-C connector](/assets/img/usbc.jpg){:width="50%"}
 
 Where does it fit? My mobo doesn't have this header! So, I had to buy a PCI-e card for it. 
 
@@ -72,4 +73,5 @@ make M=drivers/usb/host/xhci-pci-renesas.c
 # References 
 
 \[1] [Re: [PATCH v3 1/4] usb: xhci: add firmware loader for uPD720201 and uPD720202 w/o ROM](https://lore.kernel.org/lkml/20190626070658.GP2962@vkoul-mobl/)
+
 \[2] [Kernel/Arch build system](https://wiki.archlinux.org/title/Kernel/Arch_build_system)
