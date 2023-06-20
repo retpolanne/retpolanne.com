@@ -44,3 +44,4 @@ Brewfile.lock.json
 *.swp
 *.jpg_original
 *_original
+.DS_STORE
