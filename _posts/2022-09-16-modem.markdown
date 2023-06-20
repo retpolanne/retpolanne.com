@@ -1,0 +1,126 @@
+---
+layout: post
+title: "making a call blocker"
+date: 2022-09-16 16:59:46 -0300
+categories: modem callblocker
+---
+
+# Making a call blocker
+
+So, my dad still have a landline, in 2022. And it's being spammed with robocalls. 
+
+It's so annoying that I decided to use a Raspberry Pi as a call blocker. For that, I need to play with an USB modem! 
+
+## Call blocking solutions
+
+I'll keep them out of scope to be honest, since they are their environment on their own. Links for the tool that I want to use is on [1].
+
+To make it work, I figured out I needed:
+
+- a Raspberry Pi
+- an USB Modem (I bought a Trendnet Tfm-561U)
+- a splitter
+
+You'll have something like this (I hope Jekyll doesn't break it :( )
+
+
+
+{% highlight text %}
+  phone      --------- |
+                       |---  splitter --- my isp router
+  usb modem  --------- | 
+{% endhighlight %}
+
+Now that I have everything, here's the problems.
+
+## Caller ID... doesn't work! 
+
+In order to check if the telephone is ringing, you need a tool with a very interesting name... a name that Brazilians can't read without laughing.
+
+{% highlight bash %}
+sudo apt install cu
+{% endhighlight %}
+
+That's the name of the tool, cu.
+
+Anyways, I recommend running cu on tmux, since it holds your tty. You can't exit cu. 
+
+Also, I needed to change my user to the dialout group. 
+
+{% highlight bash %}
+sudo usermod -aG dialout pinkiepie
+{% endhighlight %}
+
+And them start cu attached to /dev/ttyACM0. By making a call, it should show up the RING and the caller id, right?
+
+{% highlight bash %}
+cu -l /dev/ttyACM0
+Connected.
+
+RING
+
+RING
+{% endhighlight %}
+
+No caller id :( 
+
+I need to figure out two things: 
+
+- does the modem support caller id?
+- does it support DTMF or FSK?
+- do my landline use DTMF or FSK?
+
+I've bought a DTMF to FSK converter anyways. :money-with-wings:
+
+And also need to find my modem's chipset.
+
+## Finding the modem's chipset
+
+You can basically run lsusb to get the VID:PID, but you can get the chipset model from cu
+
+{% highlight bash %}
+cu -l /dev/ttyACM0 
+Connected.
+ATI3
+CX93001-EIS_V0.2002-V92
+{% endhighlight%}
+
+Found out about this on [2].
+
+lsusb tells me it's a Conexant. From the Trendnet Tfm-561U datasheet, it says it supports DTMF. 
+
+I tried enabling VCID, and it says OK, but nothing shows when it rings.
+
+{% highlight bash %}
+AT+VCID=1
+OK
+{% endhighlight%}
+
+## Dialing 
+
+On the same forum [2] someone suggested using ATDT for dialing. This guide [3] teaches how to do this. 
+
+It's basically like this:
+
+{% highlight bash %}
+ATD+55yyxxxxxxxx;
+OK
+{% endhighlight%}
+
+It says ok, but doesn't ring my cellphone.
+
+Ringing without DDD works!
+
+{% highlight bash %}
+ATDT xxxxxxxxx
+{% endhighlight%}
+
+It was nice messing up with this, but the DTMF/FSK converter should arrive on monday. Hopefully no one will call this weekend. 
+
+To be continued. 
+
+## References
+
+\[1] [Call Attendant GitHub](https://github.com/emxsys/callattendant/wiki/User-Guide#recent-calls)
+\[2] [Need some guidance on setting up Caller ID Feature](https://forum.sambapos.com/t/need-some-guidance-on-setting-up-caller-id-feature/995/20)
+\[3] [11. Trying Out Your Modem (Dialing Out)](https://tldp.org/HOWTO/Modem-HOWTO-11.html)

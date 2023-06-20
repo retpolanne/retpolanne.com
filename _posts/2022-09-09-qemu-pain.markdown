@@ -1,0 +1,109 @@
+---
+layout: post
+title: "Tips and tricks: setting up QEMU for kernel development"
+date: 2022-09-09 20:37:07 -0300
+categories: tips-n-tricks qemu
+---
+# Tips and tricks: setting up QEMU for kernel development
+
+This is just a post documenting what I did to set up a QEMU VM for doing kernel development.
+It also highlights the pain points for people that want to do a headless installation (i.e. without having a GTK display available). 
+
+Why? Because I like to code on my MacBook while it's connected to my Linux box. That's why I want to avoid VNC, displays and other stuff. 
+
+I will not cover how to set up KVM (which is a painful process :P). 
+
+This post is based on a post by FLUSP [1].
+
+## Create a qcow2 image
+
+This step is straightforward.
+
+qemu-img create -f qcow2 kernel-dev.qcow 20G
+
+## Install your distro
+
+I'm using debian.iso as my boot disk.
+
+I decided to use -curses here for a curses-based GUI. 
+
+{% highlight bash %}
+qemu-system-x86_64 -enable-kvm -cdrom debian.iso -boot order=d \
+	-drive file=kernel-dev.qcow,format=qcow2 -m 2G -curses
+{% endhighlight %}
+
+After that, nothing happens. 
+
+But fear not: if you see a blank screen, hit Esc and then type:
+
+{% highlight bash %}
+install vga=normal fb=false
+{% endhighlight %}
+
+This is to disable the framebuffer and to start in vga mode. [2]
+
+Hopefully, you'll see the installation prompt for debian. Follow the steps through completion.
+
+## Boot your VM
+
+This is how I booted my VM:
+
+{% highlight bash %}
+qemu-system-x86_64 -enable-kvm \
+    -nic user,hostfwd=tcp::2222-:22 \
+    -m 16G \
+    -smp cores=8,cpus=8 \
+    -nographic \
+    kernel-dev.qcow
+{% endhighlight %}
+
+I'm using a handful of cores and RAM, but you can use whichever values your hardware supports.
+
+## Troubleshooting: what if you need to change a grub setting but you can't access your VM?
+
+I had this problem where the VM wouldn't boot and I couldn't see anything. No logs, no nothing. 
+
+So, I had to mount my qcow2 image to update grub.
+
+To achieve that, you can enable qemu-nbd [3]. 
+
+{% highlight bash %}
+sudo modprobe nbd max_part=8
+{% endhighlight %}
+
+Then connect the nbd.
+
+{% highlight bash %}
+sudo qemu-nbd --connect=/dev/nbd0 kernel-dev.qcow
+{% endhighlight %}
+
+Mount it and mount procfs, sysfs and /dev
+
+{% highlight bash %}
+sudo mkdir /mnt/qcow
+sudo mount /dev/nbd0p1 /mnt/qcow
+sudo mount --rbind /dev /mnt/qcow/dev
+sudo mount --rbind /sys /mnt/qcow/sys
+sudo mount --rbind /proc /mnt/qcow/proc
+{% endhighlight %}
+
+You can now chroot to your mountpoint
+
+{% highlight bash %}
+sudo chroot /mnt/qcow
+{% endhighlight %}
+
+Make your changes under /etc/default/grub, then run update-grub. 
+
+To disconnect the nbd, run:
+
+{% highlight bash %}
+sudo qemu-nbd --disconnect=/dev/nbd0
+{% endhighlight %}
+
+
+## References
+
+\[1] [Use QEMU to Play with Linux Kernel](https://flusp.ime.usp.br/kernel/use-qemu-to-play-with-linux/)
+\[2] [qemu-kvm install iso falls in blank screen with "640 480 graphic mode"](https://stackoverflow.com/questions/23411745/qemu-kvm-install-iso-falls-in-blank-screen-with-640-480-graphic-mode)
+\[3] [QEMU-NBD(8)](https://manpages.debian.org/testing/qemu-utils/qemu-nbd.8.en.html)

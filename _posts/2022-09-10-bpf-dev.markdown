@@ -1,0 +1,174 @@
+---
+layout: post
+title: "note-taking post – bpf kernel dev - how to begin hacking it"
+date: 2022-09-10 15:03:22 -0300
+categories: kernel-dev bpf notes
+---
+
+# note-taking post - bpf kernel dev - how to begin hacking it
+
+This is a very unstructured post, full of errors and stuff. Use it only for reference.
+
+After spending some time lurking on the bpf mailing lists, I figured out it might be a good idea to start checking some code as well.
+So, I decided to clone the bpf-next tree and check what's in there. This way, I can see some of the patches that I've seen in the mailing list. 
+
+I've also seen some interesting issues on the libbpf mirror on Github, from OSSFUZZ. [1]
+
+{% highlight bash %}
+git clone https://git.kernel.org/pub/scm/linux/kernel/git/bpf/bpf-next.git/
+cd bpf-next
+# Making the config for kvm
+make defconfig
+make kvm_guest.config
+# compiling
+make -j40
+# installing the new kernel
+sudo make install
+# updating grub
+sudo grub-mkconfig -o /boot/grub/grub.cfg
+
+# check everything :)
+qemu ➜  ~ uname -a
+Linux kernel-dev 6.0.0-rc3-00815-g2fae67716bb9 #1 SMP PREEMPT_DYNAMIC Sat Sep 10 15:14:27 -03 2022 x86_64 GNU/Linux
+
+# also a good idea to check google.com
+# since your interface may have its name changed
+curl google.com
+{% endhighlight %}
+
+Truth is: I don't understand this issue [1] 🤡
+
+I will take a look at the selftests then. [2]
+
+{% highlight bash %}
+# compiling tests
+make -C tools/testing/selftests
+{% endhighlight %}
+
+I saw a bunch of errors... attempted to only make the bpf tests.
+
+{% highlight bash %}
+cd tools/testing/selftests/bpf
+make
+{% endhighlight %}
+
+And more errors! Related to this [3].
+
+And I realized that I found a small bug! 
+
+{% highlight bash %}
+Error: failed to load BTF from /home/kernel-dev/bpf-next/vmlinux: Unknown error -2
+{% endhighlight %}
+
+This "Unknown error" should actually be positive to tell that the file does not exist. I tried changing it manually on the code and I got the right message.
+
+{% highlight bash %}
+Error: failed to load BTF from /home/kernel-dev/bpf-next/vmlinux: No such file or directory
+{% endhighlight %}
+
+This is how you compile the bpftool.
+
+{% highlight bash %}
+./tools/testing/selftests/bpf/test_bpftool_build.sh
+make -s -C tools/bpf/bpftool
+{% endhighlight %}
+
+Will keep you posted if this change makes its way to the kernel :).
+
+## updates
+
+Found the correct way to enable BTF in order to run selftests. I need to run make menuconfig and search for DEBUG_INFO_BTF. 
+From there, check all the dependencies and enable them. [4]
+
+Then: 
+
+{% highlight bash %}
+make -C tools/testing/selftests TARGETS=bpf SKIP_TARGETS=
+{% endhighlight %}
+
+And... I got new errors! 🫠
+
+{% highlight bash %}
+  CLNG-BPF [test_maps] atomic_bounds.bpf.o
+fatal error: error in backend: line 18: Invalid usage of the XADD return value
+{% endhighlight %}
+
+I updated clang to clang-16. Hint was in [4].
+
+New error:
+
+{% highlight bash %}
+progs/cgroup_hierarchical_stats.c:61:55: error: use of undeclared identifier 'memory_cgrp_id'
+{% endhighlight %}
+
+According to the email:
+
+{% highlight text %}
+memory_cgrp_id is kernel-defined internal enum which actually can
+change based on kernel configuration (i.e., which cgroup subsystems
+are enabled or not), is that right?
+{% endhighlight %}
+
+Discussion at [5].
+
+Using menuconfig, I enabled CGROUP_BPF. That... didn't do anything :(
+
+Hints at [6] and [7]. I may need to learn chinese...
+
+I realized I don't have memory cgroups available! 
+
+{% highlight bash %}
+cat /proc/cgroups | grep memory
+
+# Add this to your /etc/default/grub on GRUB_CMDLINE_LINUX
+cgroup_enable=memory swapaccount=1 systemd.unified_cgroup_hierarchy=1
+
+# then update grub
+sudo update-grub
+{% endhighlight %}
+
+That... didn't work. I really don't know how to fix it. 
+
+I fixed it by enabling CONFIG_MEMCG! 
+
+More errors:  
+
+{% highlight bash %}
+progs/test_bpf_nf.c:178:11: error: no member named 'mark' in 'struct nf_conn'
+
+# Enable these
+CONFIG_NETFILTER_XT_CONNMARK=y
+CONFIG_NF_CONNTRACK_MARK=y
+
+# More errors
+invalid linker name in argument '-fuse-ld=lld'
+# Fixed with
+sudo apt-get install lld
+
+# One more error
+Makefile.docs:76: "rst2man not found, but required to generate man pages".
+# Fixed with 
+sudo apt-get install python3-docutils
+{% endhighlight %}
+
+Now, run actual tests!
+
+{% highlight bash %}
+make TARGETS="size timers" kselftest
+
+# Another error :(
+[Makefile:156: all] Error 1
+{% endhighlight %}
+
+Tried cding to the bpf self tests directory and ran make run_tests... it's working now? More or less since I see a bunch of errors but none fatal. Ran as sudo, creepy but it works!
+
+## References
+
+\[1] [libbpf #484](https://github.com/libbpf/libbpf/issues/484)
+\[2] [Linux Kernel Selftests](https://static.lwn.net/kerneldoc/dev-tools/kselftest.html)
+\[3] [bpftool: print correct error message when failing to load BTF](https://patchwork.ozlabs.org/project/netdev/patch/20200525135421.4154-1-tklauser@distanz.ch/)
+\[4] [Re: bpf selftest compiling error](https://lore.kernel.org/bpf/YoX97QJ976GelRw6@myrica/)
+\[5] [[bpf-next,v6,8/8] selftests/bpf: add a selftest for cgroup hierarchical stats collection](https://patchwork.kernel.org/project/netdevbpf/patch/20220801175407.2647869-9-haoluo@google.com/)
+\[6] [cgroup中的cgroup_subsys[]数组解析](https://blog.csdn.net/wennuanddianbo/article/details/71244276)
+\[7] [cgroups on the raspberry pi zero](https://downey.io/blog/exploring-cgroups-raspberry-pi/)
+\[8] [Re: [PATCH bpf-next v2 2/2] selftests/bpf: Add connmark read test](https://lore.kernel.org/bpf/a2c064c4-4dd6-4f36-a00f-d1fab9e56bd4@www.fastmail.com/)
