@@ -30,8 +30,9 @@ twitter_username: jekyllrb
 github_username:  jekyll
 
 # Build settings
-theme: minima
+theme: https://github.com/retpolanne/hacker-but-cute
 plugins:
+  - jekyll-remote-theme
   - jekyll-feed
 
 # Exclude from processing.
