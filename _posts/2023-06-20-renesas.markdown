@@ -1,0 +1,75 @@
+---
+layout: post
+title:  "Kernel Dev - The Renesas Journey"
+date:   2023-06-20 11:17:21 -0300
+categories: kernel-dev renesas
+---
+
+# Kernel Dev - The Renesas Journey
+
+I'm back with my blog! And it's as shiny and brand new as possible. 
+
+This is the story of my journey with a Renesas XHCI host controller from a very weird PCI-e USB-C card. 
+
+## Prologue 
+
+So, I've recently bought a Corsair 5000x case for my computer. It's a nice and shiny case and I couldn't stop staring at it. 
+It comes with a USB-C on the front panel, which is handy for using my Yubikey. 
+
+![My shiny case with Lain dancing in it](/assets/img/case.jpg)
+
+> **_NOTE:_** Never, ever, remove the panel of your case with it in the vertical. I did it and that's what happened:
+> ![Oops!](/assets/img/broken-case.jpg)
+
+So, I use my Yubikey to decrypt LUKS, so instead of asking for a password it asks for the Yubikey and user presence 
+(I know, this isn't as safe, so I'm going to also somehow add the TPM pin to it). 
+
+After I setup everything, I tried to use the Yubikey on the front panel and... didn't work? Why isn't it working. 
+I tried also adding a Divoom speaker I have and I saw that it was charging so it wasn't a power management issue. What is the problem?
+
+I realized that there was a cable from my front panel that I didn't know where it fit. Guess what: this is the USB-C cable! 
+
+![USB-C connector](/assets/img/usbc.jpg)
+
+Where does it fit? My mobo doesn't have this header! So, I had to buy a PCI-e card for it. 
+
+### The card... doesn't work
+
+I bought the first card I found on MercadoLivre, a PH61 card. I plugged it in, connected the USB-C header cable, turned on my PC. 
+The Yubikey didn't fire up 🤡. Divoom did power up, but didn't show up on the drivers. `lsusb` didn't list it but `lspci` did! 
+
+I rebooted onto Windows and saw that the driver was failing to load for some reason. At some point, I assumed the card dead and just 
+ordered a new one from AliExpress. 
+
+## Enters the kernel
+
+Okay, even though I did order a new one, my curiosity was chiming on me: why isn't it working? It's just a software issue, and you can 
+fix software issues!
+
+So the first thing I did was a `dmesg` and voilá, I found the error. 
+
+*TODO* add the error here from dmesg.
+
+I googled the error, just like everyone does, and I found an email from the person who coded the driver stating the same error [1]. 
+
+So these were the lines that controlled this timeout, on the `drivers/usb/host/xhci-pci-renesas.c`:
+
+```c
+#define RENESAS_RETRY	1000
+#define RENESAS_DELAY	10
+```
+
+I decided to follow this guide [2] to clone the kernel, did a quick and dirty patch of these values. 
+I changed the XHCI configs to make it loadable instead of built in. Compiled the kernel, installed it, booted it, the card was still failing to load. 
+Then I changed these macros for delay and retry and recompiled just the module. I did recompile the whole kernel before doing it I believe.
+
+*TODO* add zstd commands
+```sh
+make M=drivers/usb/host/xhci-pci-renesas.c
+
+```
+
+# References 
+
+\[1] [Re: [PATCH v3 1/4] usb: xhci: add firmware loader for uPD720201 and uPD720202 w/o ROM](https://lore.kernel.org/lkml/20190626070658.GP2962@vkoul-mobl/)
+\[2] [Kernel/Arch build system](https://wiki.archlinux.org/title/Kernel/Arch_build_system)

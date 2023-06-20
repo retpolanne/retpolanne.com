@@ -40,3 +40,7 @@ override.tf.json
 terraform.rc
 
 Brewfile.lock.json
+
+*.swp
+*.jpg_original
+*_original
