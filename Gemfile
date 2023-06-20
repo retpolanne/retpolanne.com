@@ -26,3 +26,5 @@ gem "wdm", "~> 0.1.1", :platforms => [:mingw, :x64_mingw, :mswin]
 # do not have a Java counterpart.
 gem "http_parser_ruby", :platforms => [:jruby], git: 'https://github.com/retpolanne/http_parser_ruby'
 gem "em-websocket", git: 'https://github.com/retpolanne/em-websocket'
+
+gem "webrick", "~> 1.8"
