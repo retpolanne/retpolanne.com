@@ -374,6 +374,12 @@ Okay, so my action plan is to:
 2. Find a way to time how long this function takes
 3. Since it runs on a loop, maybe consolidate all of the loop runs
 
+Even better, I'm very curious to see how it matches with the uPD720201 manual [4], so:
+
+1. Add kprobes to all reads and writes 
+2. For every read and write, show the parameters, return and timestamp
+3. Try to match the parameters and return values with what they mean based on the manual
+
 > *_NOTE_* this is a live post that I'm writing as I figure stuff out. 
 
 # References 
