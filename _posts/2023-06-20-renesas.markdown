@@ -301,8 +301,78 @@ So, I'm going to blocklist the `xhci_pci_renesas` driver so it doesn't load on b
 
 ## Profiling the module
 
-*TODO* tracecmd [13]
+I was able to start tracing using `bpftrace`. For that, I needed to ensure that the module wasn't loaded at boot-time. 
 
+1. Remove `xhci_pci` from mkinitcpio.conf
+2. Compile `xhci_hcd` as a module instead of builtin
+3. Blocklist `xhci_hcd`, `xhci_pci` and `xhci_pci_renesas`
+
+To load the module on `bpftrace`:
+
+1. Modprobe first the `xhci_pci_renesas` module, so the kprobes will be available:
+
+```sh
+modprobe xhci_pci_renesas
+
+bpftrace -l 'kprobe:renesas*'
+kprobe:renesas_check_rom
+kprobe:renesas_fw_check_running
+kprobe:renesas_fw_download_image
+kprobe:renesas_xhci_check_request_fw
+
+# This will print something if the kprobe is reached
+# However it doesn't seem to print live
+bpftrace -e 'kprobe:renesas_fw_download_image { printf("Here!"); }'
+
+# On another terminal
+# I keep dmesg running while grepping for the PCI card
+dmesg -Tw | grep 06:00
+
+# On another terminal, I load xhci_pci
+modprobe xhci_pci
+
+# LOOK!
+bpftrace -e 'kprobe:renesas_fw_download_image { printf("Here!"); }'
+Attaching 1 probe...
+Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!He
+```
+
+Am I able to go lower and trace pci read/writes?
+
+```sh
+bpftrace -l 'kprobe:pci_read*'
+kprobe:pci_read
+kprobe:pci_read_bases
+kprobe:pci_read_bridge_bases
+kprobe:pci_read_config
+kprobe:pci_read_config_byte
+kprobe:pci_read_config_dword
+kprobe:pci_read_config_word
+kprobe:pci_read_irq
+kprobe:pci_read_resource_io
+kprobe:pci_read_rom
+kprobe:pci_read_vpd
+kprobe:pci_read_vpd_any
+```
+
+YES!
+
+```sh
+# Clean up
+rmmod xhci_pci xhci_pci_renesas
+bpftrace -e 'kprobe:pci_read_config_byte { printf("Here!"); }'
+modprobe xhci_pci
+
+bpftrace -e 'kprobe:pci_read_config_byte { printf("Here!"); }'
+Attaching 1 probe...
+^CHere!Here!Here!Here!Here!Here!Here!Here!Here!Here!Here!
+```
+
+Okay, so my action plan is to:
+
+1. Filter the `kprobe:pci_read_config_byte` to trace only when reading `RENESAS_ROM_STATUS_MSB`
+2. Find a way to time how long this function takes
+3. Since it runs on a loop, maybe consolidate all of the loop runs
 
 > *_NOTE_* this is a live post that I'm writing as I figure stuff out. 
 
