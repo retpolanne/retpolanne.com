@@ -380,7 +380,13 @@ Even better, I'm very curious to see how it matches with the uPD720201 manual [4
 2. For every read and write, show the parameters, return and timestamp
 3. Try to match the parameters and return values with what they mean based on the manual
 
-> *_NOTE_* this is a live post that I'm writing as I figure stuff out. 
+## Epilogue
+
+I spent the day setting up a bpftrace program to trace all of the pci reads and writes. I was able to log successful traces and I'm quite happy with my achievement. However, I'm not really sure about my patch – it works, but only for me. I tried to read a little about waiting patterns on kernel modules and it's an interesting read. [15]
+
+I'm also doing a back and forth with the maintainers to see if there are better ways to send this patch, if there's any. Maybe a simple sysfs setting might be all it needs.
+
+It's not today that I'm going to get my _Stella Star_ – but it was a nice journey back to the kernel.
 
 # References 
 
@@ -409,3 +415,7 @@ Even better, I'm very curious to see how it matches with the uPD720201 manual [4
 \[12] [Blocklisting](https://wiki.archlinux.org/title/Kernel_module#Blacklisting)
 
 \[13] [Kernel Modules Debugging Tips (2)](http://haneensa.github.io/2018/06/13/kerneldebug2/)
+
+\[14] [renesas-pci-trace.bt](https://github.com/retpolanne/kernel-workspace/blob/main/bpf/renesas-pci-trace.bt)
+
+\[15] [Chapter 7. Time, Delays, and Deferred Work](https://www.oreilly.com/library/view/linux-device-drivers/0596005903/ch07.html)
