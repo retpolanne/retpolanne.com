@@ -295,6 +295,15 @@ LOL it did die. The NVMe controller is in the same group, I wonder how much harm
 
 Forget about PCI passthrough :(. Need to deal with real HW.
 
+## Back to real hardware
+
+So, I'm going to blocklist the `xhci_pci_renesas` driver so it doesn't load on boot and make sure to debug it when I start it manually. It is described here [12]. Buuut it didn't really work.
+
+## Profiling the module
+
+*TODO* tracecmd [13]
+
+
 > *_NOTE_* this is a live post that I'm writing as I figure stuff out. 
 
 # References 
@@ -320,3 +329,7 @@ Forget about PCI passthrough :(. Need to deal with real HW.
 \[10] [Ensuring that the groups are valid](https://wiki.archlinux.org/title/PCI_passthrough_via_OVMF#Ensuring_that_the_groups_are_valid)
 
 \[11] [VFIO - "Virtual Function I/O" [1]](https://www.kernel.org/doc/Documentation/driver-api/vfio.rst)
+
+\[12] [Blocklisting](https://wiki.archlinux.org/title/Kernel_module#Blacklisting)
+
+\[13] [Kernel Modules Debugging Tips (2)](http://haneensa.github.io/2018/06/13/kerneldebug2/)
