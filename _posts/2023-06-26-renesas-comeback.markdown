@@ -185,7 +185,7 @@ I'm currently waiting for responses on the patch, but I believe I'll study the c
 2. I still didn't fully understand the fw_download function. Need to check if it matches with the manual. 
 3. Why does step 34 (the 34th DWORD) takes so long to load? Why so specific? 
 
-> *_NOTE_* this post is being updated as I figure stuff out.
+I'll discuss the first question on the next post! 
 
 # References 
 
