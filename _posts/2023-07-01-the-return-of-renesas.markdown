@@ -181,6 +181,39 @@ setpci -v -s 06:00.0 f6.w
 
 3. Load the xhci-pci-renesas module, load my bpftrace program, dmesg, and see if I get the step-34 bug with the new card – will also see if the card gets erased as well.
 
+## A simple workaround
+
+I've also found a quite simple workaround: to fiddle with the FW Download Lock register. This will run before
+any kernel modules load (even the ones on your mkinitcpio). Please change the PCI id for your card (mine is 
+06:00.0).
+
+It's pretty simple, and can be set up on boot automatically:
+
+1. Create a file for the service: `/lib/systemd/system/renesas-setpci.service"`
+
+2. Contents:
+
+```sh
+[Unit]
+Description=Disable Renesas FW Download
+Before=systemd-modules-load.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/setpci -v -s 06:00.00 f4.b=ff
+
+[Install]
+WantedBy=systemd-modules-load.service
+```
+
+3. Enable the service
+
+```sh
+systemctl enable renesas-setpci
+```
+
+Reboot and you'll see the FW download lock engaged and your ROM will be spared :). 
+
 > *_NOTE_* this post is being updated as I figure stuff out.
 
 # References 
