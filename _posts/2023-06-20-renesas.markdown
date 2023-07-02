@@ -295,7 +295,22 @@ LOL it did die. The NVMe controller is in the same group, I wonder how much harm
 
 > UPDATE: by moving the card to my GPU's PCIe port, I was able to isolate the VFIO group :) 
 
-Forget about PCI passthrough :(. Need to deal with real HW.
+```sh
+modprobe vfio_pci
+echo "1912 0014" > /sys/bus/pci/drivers/vfio-pci/new_id
+echo "0000:08:00.0" > /sys/bus/pci/devices/0000\:08\:00.0/driver/unbind
+echo "0000:08:00.0" > /sys/bus/pci/drivers/vfio-pci/bind
+
+sudo qemu-system-x86_64 \
+    -kernel src/archlinux-linux/arch/x86/boot/bzImage \
+    -hda debootstrap.img \
+    -append "root=/dev/sda console=ttyS0" \
+    -serial stdio \
+    -device vfio-pci,host=08:00.0
+```
+
+Problems with using vfio: I believe pci config will still be the same as the host because it's a shared memory. So the module will not 
+misbehave as it does on real HW. Let's go for real hw. 
 
 ## Back to real hardware
 
