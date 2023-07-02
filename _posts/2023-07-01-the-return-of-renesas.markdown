@@ -184,7 +184,7 @@ setpci -v -s 06:00.0 f6.w
 ## A simple workaround
 
 I've also found a quite simple workaround: to fiddle with the FW Download Lock register. This will run before
-any kernel modules load (even the ones on your mkinitcpio). Please change the PCI id for your card (mine is 
+any kernel modules load (even the ones on your mkinitcpio) and also before cryptsetup. Please change the PCI id for your card (mine is 
 06:00.0).
 
 It's pretty simple, and can be set up on boot automatically:
@@ -196,14 +196,14 @@ It's pretty simple, and can be set up on boot automatically:
 ```sh
 [Unit]
 Description=Disable Renesas FW Download
-Before=systemd-modules-load.service
+Before=systemd-modules-load.service systemd-cryptsetup@.service
 
 [Service]
 Type=simple
 ExecStart=/usr/bin/setpci -v -s 06:00.00 f4.b=ff
 
 [Install]
-WantedBy=systemd-modules-load.service
+WantedBy=systemd-modules-load.service systemd-cryptsetup@.service
 ```
 
 3. Enable the service
