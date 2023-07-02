@@ -293,6 +293,8 @@ client_loop: send disconnect: Broken pipe
 
 LOL it did die. The NVMe controller is in the same group, I wonder how much harm I could've done if I blindly followed this documentation.
 
+> UPDATE: by moving the card to my GPU's PCIe port, I was able to isolate the VFIO group :) 
+
 Forget about PCI passthrough :(. Need to deal with real HW.
 
 ## Back to real hardware
