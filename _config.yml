@@ -32,6 +32,7 @@ github_profile: "https://github.com/retpolanne"
 plugins:
   - jekyll-remote-theme
   - jekyll-feed
+  - jekyll-seo-tag
 remote_theme: retpolanne/hacker-but-cute
 
 # Exclude from processing.
