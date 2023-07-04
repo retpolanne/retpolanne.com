@@ -1,3 +1,3 @@
 #!/bin/bash
 
-exiftool -all= assets/img -overwrite_original
+exiftool -all= assets/img -tagsfromfile @ -exif:Orientation -overwrite_original
