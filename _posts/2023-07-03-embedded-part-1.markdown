@@ -13,7 +13,7 @@ some Android builds for it, but it didn't support Widevine, so Netflix wouldn't 
 
 Anyways, getting any build for it was tricky back when I didn't have much knowledge on build systems and Linux.
 
-But know I'm way more knowledgeable and adventurous and I decided to build Linux from scratch for it.
+But now I'm way more knowledgeable and adventurous and I decided to build Linux from scratch for it.
 
 Well, not exactly from scratch: thankfully, most of the code for it has been sent upstream and there's a Yocto layer for
 these devices [1] and I'm currently building on top of that [2].
