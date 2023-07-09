@@ -121,6 +121,32 @@ Could not get PHY for ethernet@5020000: addr 1
 
 I wonder if I'm hitting this regression? [6]
 
+### Back to DM
+
+I've read in a couple of patches that we should focus on DM for loading stuff, so I'm trying to make the regulator-fixed work. The regulator-fixed was the part of the dts file that had the PD6 GPIO definition. 
+I wonder if that regulator will in fact enable GPIO, but things are looking so strange. 
+
+After I added `regulator-boot-on;` to arch/arm/dts/sun50i-h6-orangepi-one-plus.dts and crash-rebooted the device with `mii dump`, the Ethernet LED turned on :) at least one, the orange one didn't turn on...
+
+I found out that there's a command that I can enable on u-boot using `CONFIG_CMD_REGULATOR`. Nice!
+
+I tried to enable the regulator: 
+
+```
+=> regulator enable         
+First, set the regulator device!
+=> regulator dev vcc-gmac-3v3
+dev: vcc-gmac-3v3 @ gmac-3v3
+=> regulator enable          
+=> dhcp
+BOOTP broadcast 1
+BOOTP broadcast 2
+BOOTP broadcast 3
+BOOTP broadcast 4
+```
+
+Yay! It's not getting an IP tho, but this may be for reasons.
+
 > *_NOTE_* this post is being updated as I figure stuff out.
 
 # References 
