@@ -271,6 +271,7 @@ DEPENDENCIES
   http_parser_ruby!
   jekyll-feed (~> 0.12)
   jekyll-remote-theme
+  jekyll-sitemap
   minima (~> 2.5)
   wdm (~> 0.1.1)
   webrick (~> 1.8)

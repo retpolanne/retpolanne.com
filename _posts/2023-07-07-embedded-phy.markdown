@@ -79,6 +79,48 @@ LOL, the quick way to enable eth0 is to do a `mii dump` and let u-boot crash and
 I'm quite tired now, I'll leave this link in Chinese here \[4] (ps.: I should definitely continue studying Chinese!) which has some information about the LicheeZero u-boot ethernet. I believe they both have the same processor, so maybe its config
 should have some clue. I need to rest now.
 
+### Pinmux
+
+After playing a lot with SPL and figuring out that SPL memory is too small, I decided to go back to playing with GPIO. One thing I found on u-boot is 
+
+```
+=> pinmux status PD6
+PD6       : gpio input 
+```
+
+I noticed that PD6 wasn't on the pinout for `ext_rgmii_pins` in arch/arm/dts/sun50i-h6.dtsi and PD6 was showing on pinmux as disabled! After I added it, there was a function linked to it, but Ethernet still didn't work...
+
+If I set PD6 to output and then back to input, the LEDs die... but it clearly says on the datasheet that this pin is input. Is it undocumented (since it's not even referenced on RGMII but on GMII instead)? 
+
+PD6 is only defined on the `reg_gmac_3v3` block... why doesn't it enable stuff?
+
+After carefully checking the Allwinner H6 datasheet and the Realtek, I noticed that, on the Realtek Datasheet, RXER is Output while on Allwinner it's Input! That explains why I need to enable it to output to make the port go alive?
+
+I also noticed that it's only RXER for RMII, but for RGMII it's null! So that makes sense. Since it's not used, it's being used for some kind of voltage regulation. 
+
+I've noticed that PD7 and others also make the LED turn on, but dhcp doesn't work and I see `sun8i_emac_eth_start: Timeout`.
+
+Enabling PD7 and PD8 makes dhcp start! But I get no IP :(. 
+
+After almost losing hope, I found this: `CONFIG_MACPWR`. [5] IT TURNED ETHERNET ON!!!!! I still get weird PHY errors, and I keep getting:
+
+```
+Net:   Could not get PHY for ethernet@5020000: addr 1
+No ethernet found.
+```
+
+Changed the phy-mode on `arch/arm/dts/sun50i-h6-orangepi-one-plus.dts` to `rgmii` instead of `rgmii-id`. Still getting the error. It seems that `CONFIG_MACPWR` turned the PHY error pretty consistent :(
+
+I also see these errors on dhcp:
+
+```
+=> dhcp 
+mdio_register: non unique device name 'ethernet@5020000'
+Could not get PHY for ethernet@5020000: addr 1
+```
+
+I wonder if I'm hitting this regression? [6]
+
 > *_NOTE_* this post is being updated as I figure stuff out.
 
 # References 
@@ -90,3 +132,7 @@ should have some clue. I need to rest now.
 \[3] [Orange Pi One Plus datasheets](https://drive.google.com/drive/folders/1i_jeJRCf0Sr5p62RMo5xodUwTFXELpEi)
 
 \[4] [以太网使用指南](https://licheezero.readthedocs.io/zh/latest/%E9%A9%B1%E5%8A%A8/Ethernet.html#id1)
+
+\[5] [[RFC,02/17] sunxi: remove CONFIG_MACPWR](https://patchwork.ozlabs.org/project/uboot/patch/20221206004549.29015-3-andre.przywara@arm.com/)
+
+\[6] [[PATCH 0/2] sunxi: Fix Ethernet on mostly A20 boards](https://lore.kernel.org/u-boot/20220316005443.16260-1-andre.przywara@arm.com/)
