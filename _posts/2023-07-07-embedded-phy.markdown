@@ -147,7 +147,136 @@ BOOTP broadcast 4
 
 Yay! It's not getting an IP tho, but this may be for reasons.
 
-> *_NOTE_* this post is being updated as I figure stuff out.
+## it's PHYnally over! 
+
+I've made it! Patch is sent! 
+
+The first thing I did was to focus on why ethernet initialization was so flaky (I would see the "Could not get PHY for ethernet@xxxxx" from time to time after reset. 
+And also, I read that some TX and RX values that impacted dhcp from running
+were fixed by the Realtek PHY driver, but I could never use it and driver initialization would always fallback to Generic PHY... strange! 
+
+The code that printed this error was under `drivers/net/phy/phy.c` and I read it and added some print-debugs here and there.
+ 
+The fun stuff is here:
+
+```c
+struct phy_device *phy_connect(struct mii_dev *bus, int addr,
+			       struct udevice *dev,
+			       phy_interface_t interface)
+{
+	struct phy_device *phydev = NULL;
+	uint mask = (addr >= 0) ? (1 << addr) : 0xffffffff;
+
+#ifdef CONFIG_PHY_FIXED
+	phydev = phy_connect_fixed(bus, dev);
+#endif
+
+#ifdef CONFIG_PHY_NCSI
+	if (!phydev && interface == PHY_INTERFACE_MODE_NCSI)
+		phydev = phy_device_create(bus, 0, PHY_NCSI_ID, false);
+#endif
+
+#ifdef CONFIG_PHY_ETHERNET_ID
+	if (!phydev)
+		phydev = phy_connect_phy_id(bus, dev, addr);
+#endif
+
+#ifdef CONFIG_PHY_XILINX_GMII2RGMII
+	if (!phydev)
+		phydev = phy_connect_gmii2rgmii(bus, dev);
+#endif
+
+	if (!phydev)
+		phydev = phy_find_by_mask(bus, mask);
+
+	if (phydev)
+		phy_connect_dev(phydev, dev, interface);
+	else
+		printf("Could not get PHY for %s: addr %d\n", bus->name, addr);
+	return phydev;
+}
+```
+
+I set this config `CONFIG_PHY_ETHERNET_ID` and I thought that it was going to work, but nah... but looking at the `phy_connect_phy_id`, it looks on the dts for which phy it should use. That's very cool, but it's not working for me. It should!
+
+After some print-debugs, I figured out where things returned and it was in this function under `drivers/core/ofnode.c`.
+
+```c
+int ofnode_read_eth_phy_id(ofnode node, u16 *vendor, u16 *device)
+{
+	const char *list, *end;
+	int len;
+
+	list = ofnode_get_property(node, "compatible", &len);
+
+	if (!list)
+		return -ENOENT;
+
+	end = list + len;
+	while (list < end) {
+		len = strlen(list);
+
+		if (len >= strlen("ethernet-phy-idVVVV.DDDD")) {
+			char *s = strstr(list, "ethernet-phy-id");
+
+			/*
+			 * check if the string is something like
+			 * ethernet-phy-idVVVV.DDDD
+			 */
+			if (s && s[19] == '.') {
+				s += strlen("ethernet-phy-id");
+				*vendor = simple_strtol(s, NULL, 16);
+				s += 5;
+				*device = simple_strtol(s, NULL, 16);
+
+				return 0;
+			}
+		}
+		list += (len + 1);
+	}
+
+	return -ENOENT;
+}
+```
+
+From what I understood, it lists all the compatible properties and try to match which driver is compatible with each compatible blog. Pay close attention to the format: 
+
+```
+ethernet-phy-idVVVV.DDDD
+```
+
+What we had on the Orange Pi One Plus dts was this: 
+
+```
+ethernet-phy-ieee802.3-c22
+```
+
+After searching for the VID.PID for the Realtek driver, I added this to the dts's PHY compatible line: `ethernet-phy-id001c.c915`. 
+
+Also added these configs: 
+
+```
+# EMAC driver, needed for doing MAC stuff on sunxi
+CONFIG_SUN8I_EMAC=y
+# Load realtek phy driver
+CONFIG_PHY_REALTEK=y
+# Explained above
+CONFIG_PHY_ETHERNET_ID=y
+# This one is tricky: remember PD6? There are two ways to enable it: use this config
+# or use a regulator.
+# I still haven't figured out how to probe the regulator on u-boot, so I'm using this one.
+CONFIG_MACPWR="PD6"
+```
+
+After sending the image to the SD-Card and turning the board on... I see eth0 being loaded... and mdio reports REALTEK PHY DRIVER! AND DHCP WORKS!!!
+
+![DHCP Works!](/assets/img/orangepidhcp.jpg)
+
+I'm so happy. Folks from meta-sunxi merged my patch and it was already sent to u-boot (currently waiting for approval).
+
+Next steps: figure out stuff about the regulator, or why it isn't being probed.
+
+This was a nice journey. On another post, I'll explain about tbot or how I did TDD on the u-boot layer.
 
 # References 
 
@@ -162,3 +291,5 @@ Yay! It's not getting an IP tho, but this may be for reasons.
 \[5] [[RFC,02/17] sunxi: remove CONFIG_MACPWR](https://patchwork.ozlabs.org/project/uboot/patch/20221206004549.29015-3-andre.przywara@arm.com/)
 
 \[6] [[PATCH 0/2] sunxi: Fix Ethernet on mostly A20 boards](https://lore.kernel.org/u-boot/20220316005443.16260-1-andre.przywara@arm.com/)
+
+\[7] [[PATCH] sunxi: H6: Enable Ethernet on Orange Pi One Plus](https://lore.kernel.org/u-boot/20230711003957.658805-2-retpolanne@posteo.net/T/#u)
