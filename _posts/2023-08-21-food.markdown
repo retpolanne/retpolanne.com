@@ -1,0 +1,24 @@
+---
+layout: post
+title:  "Anne Foodposting"
+date:   2023-08-21 20:51:00 -0300
+categories: food cooking
+tags: cooking food
+---
+
+I took a break from kernel debugging (since my life became a turmoil recently) and moved out of my parents' house.
+
+Things are going quite well, except for cooking. I've been ordering a lot of food, a lot of unhealthy and expensive food...
+
+For this reason, I decided to compile some recipes of my favorite food, things that I can easily prepare and that are mostly vegetarian or vegan 
+(I still eat meat, but I think meat can be annoyingly poisonous if you don't repare/store it correctly). 
+
+While researching, I've also been finding old blogs from people talking about veganism, vegetarianism and sharing interesting recipes. I prefer 
+following recipes from blogs, Idk why. I'll also share some Youtube videos, but I definitely prefer food blogging. 
+
+## Recipes
+
+- [Yuka in Tokyo - Onigiri](https://www.youtube.com/watch?v=t9zv-_5aOoo) - YouTube - in English with Portuguese subtitles
+- [Chef Helena Jang - Kimbap](https://www.youtube.com/watch?v=wJaXuIIAfJ0) - YouTube - in Portuguese
+- [Papacapim - a lot of recipes](http://www.papacapim.org/receitas/) - blog - in Portuguese
+- [Eats and Shoots - Onigiri](https://eatsandshoots.wordpress.com/2013/12/16/onigiri/) - blog - in Portuguese
