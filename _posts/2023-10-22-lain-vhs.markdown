@@ -1,0 +1,182 @@
+---
+layout: post
+title:  "Learning streaming pipelines with Serial Experiments Lain in VHS"
+date:   2023-10-22 21:46:00 -0300
+categories: gstreamer
+tags: yocto lain gstreamer
+---
+
+Ah, VHS recordings. Remember when you could easily record stuff on TV without any DRM scheme making a fuss.
+When I was a kid, my dad would record a lot of shows from Nickelodeon on his VCR and these things had rare broadcasts sometimes.
+I remember one day when a new episode of Chalkzone was going to air and I wasn't going to be home that night, so my mom 
+offered to record the episode for me. I miss these times sometimes. 
+
+Anyways, as you may know I'm completely obsessed with Serial Experiments Lain, and after seeing the SEL 9/11 broadcasting 
+recording on YouTube [1] I realized that VHS fits so much the aesthetics of this anime from the late 90s. I do have a Blu-Ray 
+copy of Lain, but VHS recordings are so expensive on eBay. Well, why don't I make my own VHS recording of Lain?
+
+I decided to use a Raspberry Pi 3B as a video streaming client for that. 
+
+## Objectives 
+
+1. I shall not use any GUI client on the Raspberry Pi 
+2. I have to stream content from a server (e.g. my laptop) to the client, if possible automatically (i.e. wait for broadcast to be available) 
+3. The stream should be as smooth as possible to be free of digital artifacts (only analogic artifacts are accepted, as they are usually very elegant) 
+4. I shall make my own Yocto image for Linux
+5. It should not need a keyboard connected to the raspberry pi - everything should be done through UART and sent to the framebuffer
+
+## Setup
+
+The setup is quite simple: 
+
+```
+ -----------                --------
+| raspberry | -rca cable-> |  vcr   |
+ -----------                --------
+      |___ uart
+```
+
+So I basically connected the raspberry through RCA to the VCR and RX/TX/GND to a FTDI so I could talk to it in UART. 
+
+Streamwise, it should look like this: 
+
+```
+laptop ffmpeg mp4 playlist ----> laptop mediamtx rtsp <------ raspberrypi rtsp client (gstreamer
+```
+
+## Yocto
+
+I don't recall how I found out about gstreamer, but it looked interesting and it had recipes for yocto already, so good thing.
+I tried ffplay from ffmpeg but I couldn't make it work for some reason (I was building 64 bits probably?).
+
+Here's what I added to my `conf/local.conf` `IMAGE_INSTALL:append`:
+```
+-IMAGE_INSTALL:append = " avahi-daemon python3-ansible cloud-init dhcpcd"
++IMAGE_INSTALL:append = " avahi-daemon python3-ansible cloud-init dhcpcd gstreamer1.0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad"
+```
+
+I decided to install all of the plugins, even the bad ones, but when I tried to install some of the plugins they weren't showing up. Guess what? I was compiling 64 bits and some of them only supported 32 bits for ARM!) So, on `conf/local.conf`: 
+
+```
+-MACHINE ?= "raspberrypi3-64"
++MACHINE ?= "raspberrypi3"
+```
+
+I needed to make some changes to poky, update meta-raspberrypi, etc.
+
+I also added a bbappend to enable kmssink [2]. `conf/local.conf`:
+
+```
+cat rpi-build/recipes-multimedia/gstreamer/gstreamer1.0-plugins-bad_1.22.6.bbappend
+PACKAGECONFIG:append = " kms"
+
+bitbake -e gstreamer1.0-plugins-bad | grep PACKAGECONFIG | grep kms
+PACKAGECONFIG="     orc     bluez     vulkan x11     wayland     gl     bz2 closedcaption curl dash dtls hls openssl sbc smoothstreaming     sndfile ttml uvch264 webp     rsvg  kms hls                    faad"
+PACKAGECONFIG_CONFARGS=" -Daom=disabled -Dassrender=disabled -Davtp=disabled -Dbluez=enabled -Dbz2=enabled -Dclosedcaption=enabled -Dcurl=enabled -Ddash=enabled -Ddc1394=disabled -Ddirectfb=disabled -Ddtls=enabled -Dfaac=disabled -Dfaad=enabled -Dfluidsynth=disabled -Dgl=enabled -Dhls=enabled -Dkms=enabled -Dcolormanagement=disabled -Dlibde265=disabled -Dcurl-ssh2=disabled -Dmodplug=disabled -Dmsdk=disabled -Dneon=disabled -Dopenal=disabled -Dopencv=disabled -Dopenh264=disabled -Dopenjpeg=disabled -Dopenmpt=disabled -Dhls-crypto=openssl -Dopus=disabled -Dorc=enabled -Dresindvd=disabled -Drsvg=enabled -Drtmp=disabled -Dsbc=enabled -Dsctp=disabled -Dsmoothstreaming=enabled -Dsndfile=enabled -Dsrt=disabled -Dsrtp=disabled -Dtinyalsa=disabled -Dttml=enabled -Duvch264=enabled -Dv4l2codecs=disabled -Dva=disabled -Dvoaacenc=disabled -Dvoamrwbenc=disabled -Dvulkan=enabled -Dwayland=enabled -Dwebp=enabled -Dwebrtc=disabled -Dwebrtcdsp=disabled -Dx11=enabled -Dx265=disabled -Dzbar=disabled"
+```
+
+I also learned about devtool! No need to send all the changes to the sdcard all the time! Use SSH! 
+
+```sh
+devtool modify gstreamer1.0-plugins-bad
+devtool deploy-target gstreamer1.0-plugins-bad root@raspberrypi.local -s
+```
+
+# Gstreamer Pipelines
+
+**TODO** write about gstreamer.
+
+First, I created a gstreamer pipeline to generate a videotestsrc with audiotestsrc. `!` are pipes, so you need to 
+connect them in a logical manner.
+
+```sh
+gst-launch-1.0 videotestsrc \
+    ! video/x-raw,width=640,height=480 \
+    ! fbdevsink \
+    audiotestsrc \
+    ! audioconvert \
+    ! autoaudiosink
+```
+
+```sh
+# Commented
+# videotestsrc is a source, where the pipe starts
+gst-launch-1.0 videotestsrc \
+    ! video/x-raw,width=640,height=480 \ # Take the raw video and set the width and height of it
+    ! fbdevsink \ # Sink the video to the framebuffer (default /dev/fb0)
+    audiotestsrc \ # audiotestsrc is in another thread, not on the same pipeline
+    ! audioconvert \ # convert audio
+    ! autoaudiosink # automagically sink audio
+```
+
+This testpattern doesn't really do hardware decoding and can easily send stuff to the framebuffer. However, 
+when we play the Lain episode like this, we get digital artifacts due to not doing hardware decoding.
+
+```sh
+gst-launch-1.0 filesrc location=/home/root/layer1.mp4 \
+    ! decodebin name=dec \
+    ! videoconvert \
+    ! fbdevsink \
+    dec. \
+    ! audioconvert \
+    ! audioresample \
+    ! autoaudiosink
+```
+
+**TODO** adds comments 
+
+In the end, I had to do this pipeline here to decode using hardware: 
+
+```sh
+gst-launch-1.0 filesrc location=/home/root/layer01.mp4 \
+    ! qtdemux \
+    ! h264parse \
+    ! v4l2h264dec \
+    ! videoconvert \
+    ! kmssink
+```
+
+**TODO** adds comments 
+
+In the end, syncing audio and video.
+
+```sh
+gst-launch-1.0 filesrc location=/home/root/layer01.mp4 \
+    ! qtdemux name=dmux \
+    dmux.video_0 \
+    ! h264parse \
+    ! v4l2h264dec \
+    ! videoconvert \
+    ! kmssink  \
+    dmux.audio_0 \
+    ! queue \
+    ! aacparse \
+    ! faad \
+    ! autoaudiosink
+```
+
+## FFMPEG magic
+
+### Cropping video
+
+Since the blu-ray rip had padding (black borders so that the file could be 16:9 although the original format is 4:3), I used 
+cropdetect to find the borders and crop it.
+
+```sh
+# This will cropdetect the borders and show the exact param for cropping
+ffmpeg -i layer01.mp4 -vf cropdetect out.mp4
+# Cropping all the episodes with the param from cropdetect
+for i in {01..13}; do echo $i; ffmpeg -i Serial\ Experiments\ Lain\ -\ S01E$i.mp4 -filter:v "crop=672:480:92:0" layer$i.mp4 done
+```
+
+### Publishing to mediamtx
+
+```sh
+docker run -d --rm --network=host bluenviron/mediamtx:latest
+
+```
+
+# References 
+
+\[1] [The episode of Lain that aired after 9/11](https://www.youtube.com/watch?v=u5xt5WG7tt0)
+\[2] [A GStreamer Video Sink using KMS](https://blogs.igalia.com/vjaquez/2012/06/20/a-gstreamer-video-sink-using-kms/)
