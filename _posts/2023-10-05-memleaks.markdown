@@ -1,0 +1,18 @@
+---
+layout: post
+title: "Hunting memory leaks in Django"
+date: 2023-10-05 09:42:05 -0300
+categories: python 
+tags: django python memoryleaks
+---
+
+I'm currently working on a GeoDjango app that has some weird memory leak. After a short while, the server
+process dies due to OOM. I wanted to understand why this was happening.
+
+My approach was:
+
+1. Disable DEBUG - [bug report](https://code.djangoproject.com/ticket/31419#ticket)
+2. Add an URL pattern that receives start/end and calls a simple view that generates snapshots
+3. Compare both snapshots from start to end
+
+
