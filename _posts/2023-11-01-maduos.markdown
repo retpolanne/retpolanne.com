@@ -1,0 +1,64 @@
+---
+layout: post
+title: "Love is in the air: making a toy OS for my girlfriend (part 1)"
+date: 2023-11-01 08:42:26 -0300
+categories: operating-systems
+tags: riscv rust love
+---
+
+My girlfriend is a person who loves computing, music and creativity. She's a developer and she studies at the same university I've attended. 
+We were talking one day about exchanging gifts and she told me she prefers handcrafted gifts. She, jokingly, told me I could write my own 
+Linux distro for her! So, I had an idea: why don't I make a simple OS for her? 
+
+I've made it before, a quite simple x86 OS that runs on QEMU way back in school. [1] It obviously isn't a full-fledged OS, it just boots and shows
+the image of the kernel cat :3 nya. 
+
+Then I saw on the OSDEV wiki an article about their bare-bones tutorial for the Raspberry Pi that pointed to a repo for it written in Rust! [2].
+I already wanted to learn Rust, so that's an opportunity. The tutorial also mentions RISC-V, sooooo that's a good idea. 
+
+The idea is: I'll make my girlfriend a toy OS written in Rust for the RISC-V and I'll give her a MangoPi with it installed :3.
+
+So I created a fork for this Raspberry Pi tutorial so I could make changes for the MangoPi. [3]
+
+## Building the toolchain
+
+I'm using my Lima DuArch setup to build the GCC toolchain for riscv64. I had to do the following: 
+
+```sh
+# Install dependencies
+sudo pacman -Syyu autoconf automake curl python3 libmpc mpfr gmp gawk base-devel bison flex texinfo gperf libtool patchutils bc zlib expat
+
+# Clone repo and subrepos
+git clone https://github.com/riscv-collab/riscv-gnu-toolchain.git --recursive
+
+# Configure to the prefix /opt/riscv
+./configure --prefix=/opt/riscv
+
+# Compile, should take a while, grab a coffee
+make -j`nproc` linux
+
+# Tarball
+cd /opt
+tar -czvf /tmp/riscv64-toolchain-linux-gnu.tar.gz riscv/
+
+# Then I uploaded the toolchain to a DigitalOcean spaces bucket
+```
+
+Commit `ed0d96b6f104531e6f339fc96488947ff1362bc5` contains the changes for the Dockerfile so that the toolchain can be downloaded and installed.
+
+## Building the kernel
+
+To make the kernel, run `BSP=mangopi make` and then `BSP=mangopi make qemu`
+
+
+## References
+
+\[1] [osdev-barebones](https://github.com/retpolanne/osdev-barebones)
+
+\[2] [rust-raspberrypi-OS-tutorials](https://github.com/rust-embedded/rust-raspberrypi-OS-tutorials)
+
+\[3] [rust-mangopi-OS-tutorials-riscv](https://github.com/retpolanne/rust-mangopi-OS-tutorials-riscv)
+
+\[4] []()
+
+\[5] []()
