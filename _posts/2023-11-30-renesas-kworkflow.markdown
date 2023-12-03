@@ -236,6 +236,8 @@ sudo ln -s /dev/vfio/noiommu-0 /dev/vfio/0
 
 I think I hit a wall because RPI CM4 doesn't support IOMMU and qemu doesn't support no-IOMMU :C
 
+I'll use the RPI CM4 as a worker for kernel testing using OpenOCD and JTAG. See you next time!
+
 # References
 \[1] [The Linux kernel](https://www.raspberrypi.com/documentation/computers/linux_kernel.html)
 
