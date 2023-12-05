@@ -1,0 +1,59 @@
+---
+layout: post
+title: "EXTRA: Vim user moves to emacs, read more"
+date: 2023-12-05 15:55:39 -0300
+categories: editors
+tags: emacs vim
+---
+
+Becoming a vim user was a skill that I craved ever since I was a junior developer, just starting with Python. I would see senior developers using vim and 
+doing everything on their terminals and my eyes would get bright. I wanted to be like them. And just like the blink of an eye, I was stuck on vim, 
+unable to get out (quite literally) and I started doing everything on vim. HJKL is the position where my fingers rest while I'm on the computer. 
+
+And then, I needed to code in Clojure. Now, using Vim to code in Clojure will make me look like a newbie. I want to go beyond vim now: I need to use emacs. 
+
+O-Stallman, I sinned my whole programmer's life. I gave up on emacs once and used vim-repl instead. But I'm ready to try again a sip of that water named emacs. 
+
+## Getting myself started
+
+First thing I did at my new job was to create a dotfiles repo. I didn't think about it before, but doing symlinks of your configs to your repo is a great way
+of keeping them synced. So my dotfiles repo [1] is just like this.
+
+My setup is zsh, oh-my-zsh, kitty, vim, brew and emacs, all running on macOS. I'm using emacs-plus because I wanted imagemagick, however I don't really like
+the .app scaling on a 4K display, so I prefer to use it on a terminal. Using kitty, I've added the config `macos_option_as_alt yes` so I can use ALT as the 
+meta key. 
+
+For the emacs config, I'm currently using evil (because I still love vim bindings), cider (for clojure), ace-window (for window movement) and other stuff.
+
+## Workflows
+
+Here's a list of things I'm keeping note of so I can get myself up to speed on emacs.
+
+### windows and buffers
+
+`C-x 2` split above and below
+
+`C-x 3` split side by side
+
+`C-x b` change buffer
+
+`C-x 0` close buffer
+
+### ace-window
+
+`M-o` then a number will switch windows
+
+### Cider
+
+`M-x -jac` to launch the clojure REPL
+
+`C-c C-c` evaluate file
+
+`C-c C-t l` evaluate test
+
+
+## References
+
+\[1] [dotfiles](https://github.com/retpolanne/dotfiles)
+
+\[2] [macOS: Possible to bind alt or super key as meta? #155](https://github.com/kovidgoyal/kitty/issues/155#issuecomment-1074933947)
