@@ -155,6 +155,25 @@ gst-launch-1.0 filesrc location=/home/root/layer01.mp4 \
     ! autoaudiosink
 ```
 
+Opening the smpte stream
+
+```sh
+gst-launch-1.0 \
+    rtspsrc location=rtsp://helveticastandard.local:8554/lain protocols="tcp" latency=0 name=d \
+    d. \
+    ! rtph264depay \
+    ! h264parse \
+    ! avdec_h264 \
+    ! videoconvert \
+    ! kmssink \
+    d. \
+    ! rtpmp4gdepay \
+    ! aacparse \
+    ! avdec_aac \
+    ! audioconvert \
+    ! alsasink device=hw:1
+```
+
 ## FFMPEG magic
 
 ### Cropping video
@@ -173,12 +192,53 @@ for i in {01..13}; do echo $i; ffmpeg -i Serial\ Experiments\ Lain\ -\ S01E$i.mp
 
 This is how we broadcast a test pattern to our system
 
+On the server:
+
 ```sh
 docker run -d --rm --network=host bluenviron/mediamtx:latest
+ffmpeg -re -f lavfi -i "smptebars=rate=30:size=640x480" -t 60000 \
+-f lavfi -i "sine=frequency=1000:sample_rate=48000" \
+-vf drawtext="text='ANNIECORE TV':rate=30:x=(w-tw)/2:y=(h-lh)/2:fontsize=48:fontcolor=white:box=1:boxcolor=black:font='Times New Roman'" \
+-c:v h264 -profile:v baseline -pix_fmt yuv420p -preset ultrafast -tune zerolatency -crf 28 -g 60 -c:a aac -f rtsp -rtsp_transport tcp rtsp://localhost:8554/smpte
 
+
+ffmpeg -re -i s01e01.mp4 -c:v h264 -c:a aac -f rtsp -rtsp_transport tcp rtsp://localhost:8554/lain
+```
+
+### Back to ubuntu server
+
+Need to set up `dtoverlay=vc4-kms-v3d` on `config.txt` for kmssink. I'm using ubuntu server now, my plan is to set up cloud-init somehow to install gstreamer, gstreamer-plugins-good, gstreamer1.0-libav, gstreamer1.0-alsa and gstreamer-plugins-bad.
+
+After this, I got this error: `ERROR: from element /GstPipeline:pipeline0/GstKMSSink:kmssink0: Could not get allowed GstCaps of device`
+
+I don't see logs anymore on the TV...
+
+After adding this to `config.txt` I can see them now :) 
+
+```
+dtoverlay=vc4-kms-v3d,cma-512,composite=1
+```
+
+Now kmssink works :)
+
+## Future work
+
+Include fallbacksrc to pipeline. [4]
+
+```sh
+git clone https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git
+cd gst-plugins-rs
+sudo apt install cargo
+cargo install cargo-c
+cargo cbuild -p gst-plugin-fallbackswitch 
 ```
 
 # References 
 
 \[1] [The episode of Lain that aired after 9/11](https://www.youtube.com/watch?v=u5xt5WG7tt0)
+
 \[2] [A GStreamer Video Sink using KMS](https://blogs.igalia.com/vjaquez/2012/06/20/a-gstreamer-video-sink-using-kms/)
+
+\[3] [Gstreamer errors on specific h264 bytestream on Bullseye and Buster, works if Buster has firmware downgraded.](https://github.com/raspberrypi/firmware/issues/1673)
+
+\[4] [Automatic retry on error and fallback stream handling for GStreamer sources](https://coaxion.net/blog/2020/07/automatic-retry-on-error-and-fallback-stream-handling-for-gstreamer-sources/)
