@@ -1,0 +1,22 @@
+---
+layout: post
+title: "Raspberry Pi CM4 and OpenOCD"
+date: 2023-12-15 18:02:28 -0300
+categories: kernel-dev
+tags: embedded jtag
+---
+
+I'm trying to debug the Renesas XHCI bug using the Raspberry Pi CM4 (which has a PCI interface). However, it doesn't 
+support IOMMU, so I can't debug using QEMU... I bought a JTAG then and I'm going to use it with OpenOCD :)
+
+## Installing GDB Multiarch on Arch Linux
+
+```sh
+yay -S gdb-multiarch
+```
+
+I've built openocd from the source.
+
+## References
+
+\[1] [https://linaro.atlassian.net/wiki/x/CJzH4wU](https://linaro.atlassian.net/wiki/spaces/TCWGPUB/pages/25296346120/Raspberry+Pi+Linux+kernel+debugging+with+OpenOCD)
