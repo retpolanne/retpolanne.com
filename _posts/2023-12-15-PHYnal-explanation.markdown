@@ -36,6 +36,24 @@ There's a device called pinmux (pin multiplexer) that defines which signal gets 
 
 > This post is a work in progress and I'll update it as soon as I get more interesting stuff going on.
 
+## FEL USB Boot
+
+It's possible to boot the Orange Pi without an SD card by using FEL USB Boot!
+
+```sh
+git clone https://github.com/linux-sunxi/sunxi-tools
+cd sunxi-tools
+make
+```
+
+And then, on the bitbake workspace
+
+```sh
+cd tmp/deploy/images/orange-pi-one-plus/ 
+# Booting only u-boot
+sudo ~/Dev/sunxi-tools/sunxi-fel -v uboot u-boot-sunxi-with-spl.bin
+```
+
 ## References
 
 \[1] [arm64: dts: allwinner: Orange Pi One Plus PHY support](https://patchwork.kernel.org/project/linux-arm-kernel/patch/20231212122835.10850-2-retpolanne@posteo.net/)
