@@ -51,6 +51,20 @@ Here's a list of things I'm keeping note of so I can get myself up to speed on e
 
 `C-c C-t l` evaluate test
 
+### DOOOOOOM
+
+I decided to install Doom Emacs and things look pretty nice! 
+
+#### Doom shortcuts to remember
+
+`SPC TAB .` - switch to other workspace
+
+`SPC TAB r` - rename workspace
+
+`C-t` - create new workspace
+
+`SPC h b b` - view keybinds for specific command
+
 
 ## References
 

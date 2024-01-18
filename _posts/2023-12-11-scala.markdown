@@ -1,0 +1,19 @@
+---
+layout: post
+title: "A bunch of links about Scala Programming"
+date: 2023-12-11 14:34:48 -0300
+categories: functional
+tags: scala jvm
+---
+
+\[1] [Scala: The Static Language that Feels Dynamic](https://www.artima.com/weblogs/viewpost.jsp?thread=328540)
+
+\[2] [Scala for Java Refugees Part 1: main(String[])](https://scala4beginner.blogspot.com/2012/07/scala-for-java-refugees-part-1.html)
+
+\[3] [Introduction to Scala – the interpreter](https://alblue.bandlem.com/2007/10/scala-introduction-to-scala-interpreter.html)
+
+\[4] [Run a single ScalaTest case with Emacs and sbt-mode](https://ag91.github.io/blog/2020/10/23/run-a-single-scalatest-case-with-emacs-and-sbt-mode/)
+
+\[5] [My Emacs setup for Scala development](https://ag91.github.io/blog/2020/10/16/my-emacs-setup-for-scala-development/)
+
+\[6] [ENSIME and Emacs as a Scala IDE](https://troikatech.com/blog/2014/11/26/ensime-and-emacs-as-a-scala-ide/)
