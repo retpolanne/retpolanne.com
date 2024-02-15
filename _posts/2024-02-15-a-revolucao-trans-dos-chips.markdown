@@ -28,14 +28,19 @@ Mais sobre RISC e VLSI nesse paper: https://www2.eecs.berkeley.edu/Pubs/TechRpts
 
 
 [1] https://clp.bbcrewind.co.uk/
+
 [2] https://arstechnica.com/features/2020/12/how-an-obscure-british-pc-maker-invented-arm-and-changed-the-world/
+
 [3] https://medium.com/a-computer-of-ones-own/sophie-wilson-architect-of-the-modern-world-5d538af7eac7
+
 [4] https://contraditorium.com/2020/08/14/conheca-sophie-wilson-a-transsexual-mais-importante-da-sua-vida/
+
 [5]https://www.sparkfun.com/news/7203
 
 
 Imagens
 
 [a] https://museucapixaba.com.br/hoje/microcomputador-bbc-micro-de-1981/
+
 [b] https://museucapixaba.com.br/hoje/microprocessador-arm-de-1985/
 
