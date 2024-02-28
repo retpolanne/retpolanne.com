@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "My journey on kernel dev so far"
+title: "My journey in kernel dev so far"
 date: 2024-02-28 13:51:54 -0300
 categories: kernel-dev
 tags: linux kernel development emacs
