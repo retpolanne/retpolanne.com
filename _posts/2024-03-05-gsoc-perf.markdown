@@ -1,0 +1,151 @@
+---
+layout: post
+title: "GSoC 2024 preparation - perf"
+date: 2024-03-05 17:43:32 -0300
+categories: kernel-dev 
+tags: gsoc-2024 gsoc kernel-dev
+---
+
+This year's Google Summer Of Code (GSoC) will start soon and I've learned that people who are just starting on open source can also join. This made me pretty excited :) 
+
+Looking at the projects [1] that the Linux Foundation is planning to submit, I found an old friend of mine: BPF (under perf). [2]
+
+I joined the #linuxfoundation-gsoc channel on IRC and pinged Arnaldo Carvalho de Melo (Acme) to talk about my interest in joining GSoC's perf projects.
+
+acme copied me through some threads and this blogpost will be my notepad for what's being discussed. 
+
+# BTF
+
+One thing that was mentioned to me was investigating the limitations of representing Rust contructs in **BTF**. Rust is actively ignored by **pahole**. [3]
+
+# Perf lock contention
+
+Namhyung Kim, who's also copied on the emails exchange, mentioned some patches they are working too [4].
+
+[4] shows us a way to use bpf for collecting **kernel lock contention** stats without the need to do a perf lock record first. 
+
+I tested on an idle postgres db running on my Debian: 
+
+```sh
+sudo ./perf lock con -a -b `pgrep postgres`
+contended   total wait     max wait     avg wait         type   caller
+
+         2     23.38 us     11.92 us     11.69 us        mutex   do_epoll_wait+0x1dc
+```
+
+Namhyung also sent a patch for **contending locks** 
+
+## Postgres and perf lock contention - ideas for studying kernel behaviour
+
+An idea for doing perf lock contention analysis is trying to run real workloads that are CPU intensive on top of postgres. That's and idea that I had with my friend, Akemi, and my girlfriend, Madu. We're still working on this idea.
+
+I don't really have CPU or kernel-intensive workloads running on my computer, so the results won't be as interesting. But once we test some interesting stuff we should see a lot of locks.
+
+[6] shows us some example of Postgres performance gains with new kernel versions. So that means that a good and well tuned kernel could make the performance better for the database. 
+
+[7] shows us how running pgbench could expose some lock contention on the kernel caused by glibc.
+
+Hacking everything together: 
+
+```sh
+# Create a database for stress testing
+sudo -u postgres psql postgres
+psql (15.6 (Debian 15.6-0+deb12u1))
+Type "help" for help.
+
+postgres=# create database stress_test;
+CREATE DATABASE
+postgres=# 
+\q
+
+# Init pgbench
+sudo -u postgres pgbench -s 10000 -i stress_test
+
+sudo ./perf lock con -b --pid `pgrep pgbench`
+```
+
+### Errors and troubleshooting
+
+I got this error: 
+
+```
+libbpf: prog 'collect_lock_syms': BPF program load failed: No such file or directory
+libbpf: prog 'collect_lock_syms': -- BEGIN PROG LOAD LOG --
+ldimm64 failed to find the address for kernel symbol 'runqueues'.
+processed 0 insns (limit 1000000) max_states_per_insn 0 total_states 0 peak_states 0 mark_read 0
+-- END PROG LOAD LOG --
+libbpf: prog 'collect_lock_syms': failed to load: -2
+libbpf: failed to load object 'lock_contention_bpf'
+libbpf: failed to load BPF skeleton 'lock_contention_bpf': -2
+Failed to load lock-contention BPF skeleton
+lock contention BPF setup failed
+```
+
+I then compiled and installed libbpf from `tools/bpf` - but I was getting this error: 
+
+```
+libbpf: failed to find '.BTF' ELF section in vmlinux
+```
+
+Tried adding `CONFIG_DEBUG_INFO_BTF=y` to no avail. [8] should probably fix it :) So I'll switch to the linux-next branch.
+
+Nope... [9] has more info on this error.
+
+Turns out [8] is not applied to linux, but to dwarves.
+
+I deleted bpftool and pahole and installed those from source, but still vmlinux compiles without BTF...
+
+I had to delete `CONFIG_DEBUG_INFO_REDUCED` and I think I enabled BTF :)_
+
+Now I'm having another error: 
+
+```
+/usr/local/bin/ld: jit_disasm.o: in function `init_context':
+jit_disasm.c:(.text+0x2f4): undefined reference to `bfd_openr'
+```
+
+I installed the latest binutils from the source to no avail.
+
+Then, I uninstalled `binutils-dev` and `libbfd-dev` and it worked :)
+
+But I'm still having the previous error :c
+
+So I installed the kernel with the configs above and was able to fix the errors above. New error showed up: 
+
+```
+sudo perf lock con -a -b -- sleep 10
+libbpf: prog 'contention_begin': failed to find kernel BTF type ID of 'contention_begin': -3
+libbpf: prog 'contention_begin': failed to prepare load attributes: -3
+libbpf: prog 'contention_begin': failed to load: -3
+libbpf: failed to load object 'lock_contention_bpf'
+libbpf: failed to load BPF skeleton 'lock_contention_bpf': -3
+Failed to load lock-contention BPF skeleton
+lock contention BPF setup failed
+```
+
+
+# Resources
+
+[x] https://www.cs.rice.edu/~la5/doc/perf-doc/d6/d3f/target_8c.html
+
+[y] https://facebookmicrosites.github.io/bpf/blog/2018/11/14/btf-enhancement.html
+
+# References
+ 
+[1] https://wiki.linuxfoundation.org/gsoc/google-summer-code-2024
+
+[2] https://wiki.linuxfoundation.org/gsoc/2024-gsoc-perf
+
+[3] https://lore.kernel.org/bpf/20240117133520.733288-2-jolsa@kernel.org/
+
+[4] https://lore.kernel.org/all/20220729200756.666106-1-namhyung@kernel.org/
+
+[5] https://lore.kernel.org/linux-perf-users/Zd-UmcqV0mbrKnd0@x1/
+
+[6] https://news.ycombinator.com/item?id=3793973
+
+[7] http://rhaas.blogspot.com/2011/08/linux-and-glibc-scalability.html
+
+[8] https://lore.kernel.org/bpf/ZeJMnNuauQgor67O@x1/T/
+
+[9] https://lore.kernel.org/bpf/f248cf92-038c-480f-b077-f7d56ebc55bc@nvidia.com/T/
