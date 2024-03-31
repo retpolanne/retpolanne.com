@@ -22,7 +22,7 @@ here, but _typical_).
 When you are trans and neurodivergent, you live your whole life feeling that there's something different in how you feel about yourself and what others
 feel about you, but you can't really put your finger on it and tell exactly what it is. That's why I love the debugger analogy so much. It does sometimes feels literally like having a debugger in your head, when for example you need to go through neuropsychological assessment to get a diagnosis. 
 
-I like to separate my trans journey in two acts: pre egg-cracking, egg-cracking and post egg-cracking. 
+I like to separate my trans journey in three acts: pre egg-cracking, egg-cracking and post egg-cracking. 
 
 ## Egg-cracking
 
