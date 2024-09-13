@@ -6,8 +6,6 @@ categories: emacs
 tags: lisp dotfiles emacs
 ---
 
-## Emacs and dotfiles taught me how to have fun with a computer again
-
 I haven't had fun with a computer for a long long time. 
 
 ![Lain coding in lisp](/assets/img/lain-lisp.gif){:width="50%"}
