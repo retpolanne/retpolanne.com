@@ -1,0 +1,34 @@
+---
+layout: post
+title: "Emacs and dotfiles taught me how to have fun with a computer again
+date: 2024-09-12 22:52:53 -0300
+categories: emacs
+tags: lisp dotfiles emacs
+---
+
+## Emacs and dotfiles taught me how to have fun with a computer again
+
+I haven't had fun with a computer for a long long time. 
+
+![Lain coding in lisp](/assets/img/lain-lisp.gif){:width="50%"}
+
+Ever since I joined Nubank, I started learning emacs. At first I would shy away from complicated 
+elisp code. But after months of studying and working with Clojure, I started to realize that I 
+definitely love lisp. I've spent countless hours this week playing with emacs elisp and installing
+all kinds of interesting packages. At some point I want to go from doom emacs to vanilla emacs, but
+that will take some time. 
+
+![((((((((()))))))))](https://imgs.xkcd.com/comics/lisp_cycles.png)
+
+In fact, you can live on emacs, and use emacs as an operating system. You can send emails on emacs, 
+you can do all sorts of things. And it's highly hackable! 
+
+I also started setting up a dotfiles repo for installing and configuring things. Dotfiles are also
+a quite fun and easy way of setting up your laptop. You can see them, but do not fork them please. [1]
+
+My dotfiles are available [here](https://github.com/retpolanne/dotfiles).
+
+One thing I've been doing with them is doing symlinking of the directories and files so they are updated
+everytime I change something on the git repo. 
+
+[1] https://zachholman.com/2010/08/dotfiles-are-meant-to-be-forked/
