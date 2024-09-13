@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Emacs and dotfiles taught me how to have fun with a computer again
+title: "Emacs and dotfiles taught me how to have fun with a computer again"
 date: 2024-09-12 22:52:53 -0300
 categories: emacs
 tags: lisp dotfiles emacs
