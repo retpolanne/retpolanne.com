@@ -1,0 +1,35 @@
+---
+layout: post
+title: "BPF 101 - BPF for fun and profit"
+date: 2024-09-18 09:10:20 -0300
+categories: bpf
+tags: bpf tracing observability
+---
+
+A friend came by asking me about eBPF.
+As a seasoned Kubernetes administrator that haven't touched k8s in a while, I haven't heard about it in a while. 
+eBPF is an elegant weapon for a more civilized age, after all. 
+
+So, I decided to hyperfocus again on this topic and to bring you all you need to know about this tool for fun and profit. 
+
+## What is eBPF
+
+BPF comes from the Berkeley Packet Filter. 
+I have yet to dig into the story of the Berkeley Software Distribution (BSD), where it all started. This discussion [1] talks a bit about it. 
+It's quite interesting to understand where the Sockets API, TCP/IP and BSD itself came from. Modern operating systems are pretty much based on
+the same principles. 
+
+The original paper for the BPF is in [2] and it also talks a bit about architecture, history and usage (on tools such as tcpdump). 
+[3] talks about the Linux Socket Filtering, which follows the same architecture as BPF and powers libpcap (again, for tcpdump), aside from other tools.
+
+What is interesting about BPF is that it has it's own Instruction Set Architecture (ISA). Kind of like how JavaScript works (i.e. running on top of an engine
+that understands a specific language and emits bytecode [interpreter and JIT compiler] based on that language, being a virtual machine), 
+BPF runs user-supplied event-driven programs on the kernel. These programs attach to system and application events (e.g. kprobes and uprobes) 
+
+## References
+
+[1] [Hacker news thread about Unix and the Internet](https://news.ycombinator.com/item?id=40962956)
+
+[2] [The BSD Packet Filter: A New Architecture for User-level Packet Capture](https://www.tcpdump.org/papers/bpf-usenix93.pdf)
+
+[3] [Linux Socket Filtering aka Berkeley Packet Filter (BPF)](https://docs.kernel.org/networking/filter.html)
