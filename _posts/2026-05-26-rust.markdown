@@ -1,0 +1,101 @@
+---
+layout: post
+title: "Reaprendendo Rust"
+date: 2026-05-26 11:14:34 -0300
+categories: rust
+---
+
+Estou reaprendendo Rust, e tenho alguns links e coisas interessantes que gostaria de escrever sobre.
+
+## Conceitos
+
+[Arquitetura Hexagonal no Rust](https://www.howtocodeit.com/guides/master-hexagonal-architecture-in-rust#advanced-hexagonal-architecture-in-rust).
+
+### Ownership e borrowing
+
+Existe uma dancinha interessante a ser feita com ownership.
+
+[Ref](https://doc.rust-lang.org/book/ch04-02-references-and-borrowing.html). 
+
+Você pode:
+
+- Usar referências imutáveis e mutáveis (borrowing) usando `&`;
+
+- `.clone()`
+
+- [Moving](https://doc.rust-lang.org/rust-by-example/scope/move.html)
+
+### Option, Some and `.unwrap()`
+
+[Option & Unwrap](https://doc.rust-lang.org/rust-by-example/error/option_unwrap.html)
+
+[Option](https://doc.rust-lang.org/std/option/)
+
+### Traits
+
+[Traits](https://doc.rust-lang.org/book/ch10-02-traits.html) funcionam como interfaces, em que
+comportamento pode ser implementado e compartilhado. Geralmente usado com structs. 
+
+```rust
+pub trait Summary {
+    fn summarize(&self) -> String;
+}
+
+pub struct NewsArticle {
+    pub headline: String,
+    pub location: String,
+    pub author: String,
+    pub content: String,
+}
+
+// Implementa o comportamento do trait Summary para o struct NewsArticle
+impl Summary for NewsArticle {
+    fn summarize(&self) -> String {
+        format!("{}, by {} ({})", self.headline, self.author, self.location)
+    }
+}
+```
+
+### Pattern Matching
+
+Pattern Matching me lembra muito o que o Scala tem de pattern matching. Podemos usar, por exemplo,
+quando uma função retorna um `Result<Type, Error>` e você quer fazer algo com o `Ok()` e com o `Err()`.
+
+Exemplo:
+
+```rust
+let repo = match Repository::open(repo_path) {
+    Ok(repo) => repo,
+    Err(e) => panic!("failed to open repo: {}", e),
+};
+```
+
+O operator de [question mark](https://doc.rust-lang.org/rust-by-example/std/result/question_mark.html)
+é usado depois de expressões que retornam um `Result` em que não é necessário usar um `match` de
+`Ok()` ou `Err()`. No caso, `?` já faria um early return do err ou retornaria o `OK()`, permitindo
+um chaining mais bonito.
+
+### Closures
+
+[Closures](https://doc.rust-lang.org/rust-by-example/fn/closures.html) são como funções anônimas, e podem se referir à variáveis externas (diferente de funções
+normais, onde uma variável externa não está no escopo interno).
+
+Eu gosto de usar Closures com [iterators](https://doc.rust-lang.org/rust-by-example/trait/iter.html), que
+é um trait que implementa uma função `.next()` para passarmos de item em item.
+
+Um padrão de iterator com `.map()` e `.collect()` usando closures é [transformando um Vetor em iterator](https://medium.com/@sam.van.overmeire/the-many-neat-tricks-of-rusts-collect-ab7e185f6fee),
+e depois executando alguma transformação usando `.map()` e, por fim, voltando ao estado de iterator.
+
+```rust
+fn example_one() {
+    let vec: Vec<i32> = vec![1, 2, 3] // create a vector
+        .into_iter() // turn it into an iterator
+        .map(|i| i + 1) // add 1 to each element (this is a closure and can refer to outer variables)
+        .collect(); // collect the result
+    println!("{:?}", vec); // prints `[2, 3, 4]`
+}
+```
+
+### Box
+
+[I don't get Box](https://www.reddit.com/r/rust/comments/177db1p/i_dont_get_box/).
