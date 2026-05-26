@@ -99,3 +99,17 @@ fn example_one() {
 ### Box
 
 [I don't get Box](https://www.reddit.com/r/rust/comments/177db1p/i_dont_get_box/).
+
+## Algumas coisas em Rust que eu tentei codar
+
+- [llm-git-commits](https://github.com/retpolanne/llm-git-commits/tree/main)
+
+- [ebs-autoscale-rust](https://github.com/retpolanne/ebs-autoscale-rust/tree/main)
+
+- [voice-fem-tools](https://github.com/retpolanne/voice-fem-tools)
+
+- [cloud-vm-sim](https://github.com/retpolanne/cloud-vm-sim)
+
+- [ec2-termination-handler-rust](https://github.com/retpolanne/ec2-termination-handler-rust)
+
+- [rust-mangopi-OS-tutorials-riscv](https://github.com/retpolanne/rust-mangopi-OS-tutorials-riscv)
